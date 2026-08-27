@@ -43,6 +43,7 @@
     "@vue/test-utils": "2.4.11",
     "happy-dom": "20.11.8",
     "http-server": "14.1.1",
+    "playwright": "1.62.1",
     "storybook": "10.5.10",
     "tailwindcss": "4.3.3",
     "typescript": "npm:@typescript/typescript6@6.0.2",
