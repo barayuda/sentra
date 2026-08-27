@@ -13,7 +13,7 @@
   "scripts": {
     "build": "vite build",
     "test": "vitest run",
-    "lint": "eslint src",
+    "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build"

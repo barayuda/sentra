@@ -1,5 +1,6 @@
 import eslintConfigPrettier from 'eslint-config-prettier'
 import eslintPluginVue from 'eslint-plugin-vue'
+import storybook from 'eslint-plugin-storybook'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
@@ -66,6 +67,13 @@ export default tseslint.config(
     files: ['**/*.test.ts'],
     rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
+
+  /**
+   * Storybook story files get the plugin's flat recommended rules —
+   * catches missing play-function awaits and malformed CSF, which become
+   * load-bearing once the interaction test runner (Task 9) executes stories in CI.
+   */
+  ...storybook.configs['flat/recommended'],
 
   /**
    * Must be last: disables every ESLint (including eslint-plugin-vue)
