@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderCss } from './css.ts'
+import { renderCss, renderOverrideBlock } from './css.ts'
 
 describe('renderCss', () => {
   it('places Tailwind theme namespaces inside @theme', () => {
@@ -29,5 +29,27 @@ describe('renderCss', () => {
 
   it('returns an empty string for no variables', () => {
     expect(renderCss([])).toBe('')
+  })
+})
+
+describe('renderOverrideBlock', () => {
+  it('wraps variables in the given selector', () => {
+    const css = renderOverrideBlock(":root[data-theme='dark']", [
+      { name: '--color-neutral-50', value: '#18181b' },
+    ])
+    expect(css).toContain(":root[data-theme='dark'] {")
+    expect(css).toContain('--color-neutral-50: #18181b;')
+    expect(css.trimEnd().endsWith('}')).toBe(true)
+  })
+
+  it('returns an empty string for no variables', () => {
+    expect(renderOverrideBlock('.x', [])).toBe('')
+  })
+
+  it('does not route override variables into @theme', () => {
+    const css = renderOverrideBlock("[data-density='compact']", [
+      { name: '--spacing-4', value: '0.75rem' },
+    ])
+    expect(css).not.toContain('@theme')
   })
 })

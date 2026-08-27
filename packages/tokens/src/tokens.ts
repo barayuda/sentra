@@ -1,5 +1,5 @@
 import { flattenTokens, type TokenTree } from './flatten.ts'
-import { renderCss } from './css.ts'
+import { renderCss, renderOverrideBlock } from './css.ts'
 
 /**
  * The Sentra design token source of truth.
@@ -82,13 +82,72 @@ export const tokens: TokenTree = {
 }
 
 /**
+ * Dark-mode overrides. Only paths that exist in {@link tokens} may appear
+ * here — the test suite enforces that invariant — because an override with
+ * no light counterpart would be a token that silently vanishes outside dark
+ * mode.
+ *
+ * `color.neutral.600`, `color.neutral.800`, `color.danger.600`, and
+ * `color.success.600` were dropped from the plan's original list: none of
+ * those paths exist in the M1 base tree (`neutral` has no `600`/`800` step,
+ * and `danger`/`success` have no `600` step), so inventing a base token to
+ * host them was out of scope for this task.
+ */
+export const darkTokens: TokenTree = {
+  color: {
+    brand: {
+      50: '#1e2a4a',
+      600: '#7d9bf5',
+      700: '#93adf7',
+    },
+    neutral: {
+      50: '#18181b',
+      100: '#27272a',
+      200: '#3f3f46',
+      300: '#52525b',
+      700: '#e4e4e7',
+      900: '#fafafa',
+    },
+  },
+}
+
+/**
+ * Density overrides, keyed by mode. Compact tightens the spacing scale for
+ * data-heavy screens (the console app in M4 is the intended consumer);
+ * component code never branches on density — the variables do the work.
+ */
+export const densityTokens: { compact: TokenTree } = {
+  compact: {
+    spacing: {
+      2: '0.375rem',
+      3: '0.5rem',
+      4: '0.75rem',
+      6: '1rem',
+    },
+  },
+}
+
+/**
  * Runs the full token pipeline: source tree → flat variables → CSS text.
  *
  * Exposed as a function rather than a constant so the build script and the test
  * suite exercise the identical code path, and so determinism is assertable.
  *
- * @returns CSS text containing an `@theme` block followed by a `:root` block.
+ * Composes the complete stylesheet: the @theme block Tailwind reads, plain
+ * :root custom properties Tailwind has no namespace for, the dark custom
+ * variant declaration, and the mode override blocks.
+ *
+ * @returns CSS text containing, in order: `@theme` block, `:root` extras,
+ * the `@custom-variant dark` declaration, the dark override block, and the
+ * compact density override block.
  */
 export function buildTokensCss(): string {
-  return renderCss(flattenTokens(tokens))
+  const light = renderCss(flattenTokens(tokens))
+  const darkVariant = '@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));\n'
+  const dark = renderOverrideBlock(":root[data-theme='dark']", flattenTokens(darkTokens))
+  const compact = renderOverrideBlock(
+    "[data-density='compact']",
+    flattenTokens(densityTokens.compact),
+  )
+  return [light, darkVariant, dark, compact].filter(Boolean).join('\n')
 }

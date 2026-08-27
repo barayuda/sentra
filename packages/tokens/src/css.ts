@@ -96,3 +96,26 @@ export function renderCss(variables: readonly CssVariable[]): string {
 
   return [renderBlock('@theme', theme), renderBlock(':root', root)].filter(Boolean).join('\n')
 }
+
+/**
+ * Renders a flat variable list as a plain CSS override block under an
+ * arbitrary selector — the mechanism behind theme and density modes.
+ *
+ * Overrides are deliberately NOT `@theme` entries: `@theme` exists once and
+ * generates utility classes from the light values. Because every generated
+ * utility references its token as `var(--...)`, redefining the custom
+ * property under a mode selector restyles the whole system without
+ * Tailwind's involvement.
+ *
+ * @param selector - The CSS selector scoping the overrides.
+ * @param variables - Flattened custom properties to emit inside the block.
+ * @returns The CSS block, or an empty string when there is nothing to emit.
+ */
+export function renderOverrideBlock(
+  selector: string,
+  variables: readonly CssVariable[],
+): string {
+  if (variables.length === 0) return ''
+  const lines = variables.map((variable) => `  ${variable.name}: ${variable.value};`)
+  return `${selector} {\n${lines.join('\n')}\n}\n`
+}
