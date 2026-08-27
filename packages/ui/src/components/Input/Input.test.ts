@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
+import { h } from 'vue'
 import Input from './Input.vue'
 
 describe('Input', () => {
@@ -52,8 +53,15 @@ describe('Input', () => {
   })
 
   it('gives distinct ids to two instances so labels never cross-wire', () => {
-    render(Input, { props: { label: 'First' } })
-    render(Input, { props: { label: 'Second' } })
+    // Mounted together under one wrapper — and so in one Vue app root — the
+    // way two `Input`s in the same form actually would be. `useId()`'s
+    // collision-free counter is scoped per app, not per component, so this
+    // is the scenario it's meant to cover; two separate `render()` calls
+    // would each mount their own throwaway app and legitimately restart the
+    // counter, which isn't a case production code ever hits.
+    render({
+      render: () => h('div', [h(Input, { label: 'First' }), h(Input, { label: 'Second' })]),
+    })
     expect(screen.getByLabelText('First').id).not.toBe(screen.getByLabelText('Second').id)
   })
 })

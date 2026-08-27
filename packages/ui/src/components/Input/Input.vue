@@ -44,20 +44,8 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-/**
- * Collision-free base id for this instance.
- *
- * `useId()` alone is only guaranteed unique among instances that share a
- * single Vue app — its counter restarts at zero for every independent app
- * root. That collision is routine in isolated component tests (each
- * `render()` call mounts its own throwaway app) and is possible in pages
- * composed from more than one Vue app. Appending a short random suffix closes
- * that gap so two `Input`s never cross-wire their labels, at the cost of
- * `useId()`'s deterministic server/client match — acceptable here since this
- * package has no SSR consumer yet. If one is added, prefer configuring a
- * distinct `app.config.idPrefix` per app instead of relying on this suffix.
- */
-const fieldId = `${useId()}-${Math.random().toString(36).slice(2, 8)}`
+/** Collision-free, SSR-safe base id for this instance. */
+const fieldId = useId()
 /** Id of the error paragraph, referenced by `aria-describedby`. */
 const errorId = computed(() => `${fieldId}-error`)
 /** Id of the hint paragraph, referenced by `aria-describedby`. */
@@ -68,12 +56,15 @@ const hintId = computed(() => `${fieldId}-hint`)
  *
  * Returns `undefined` rather than an empty string when nothing is described, so
  * Vue omits the attribute instead of emitting `aria-describedby=""` — which
- * assistive technology would treat as a dangling reference.
+ * assistive technology would treat as a dangling reference. Hint precedes
+ * error so the order assistive technology announces them in matches the
+ * order they render in: the hint paragraph sits above the error paragraph in
+ * the template.
  */
 const describedBy = computed<string | undefined>(() => {
   const ids: string[] = []
-  if (props.error) ids.push(errorId.value)
   if (props.hint) ids.push(hintId.value)
+  if (props.error) ids.push(errorId.value)
   return ids.length > 0 ? ids.join(' ') : undefined
 })
 
