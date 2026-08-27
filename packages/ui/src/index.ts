@@ -21,3 +21,5 @@ export { FIELD_CLASSES, FOCUS_CLASSES, SIZE_CLASSES } from './shared/controls.ts
 export type { Size } from './shared/controls.ts'
 export { default as DataTable } from './components/DataTable/DataTable.vue'
 export type { ColumnDef } from './components/DataTable/columns.ts'
+export { default as Money } from './components/Money/Money.vue'
+export { default as ProductCard } from './components/ProductCard/ProductCard.vue'

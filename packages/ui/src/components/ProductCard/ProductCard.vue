@@ -1,0 +1,76 @@
+<script setup lang="ts">
+import Money from '../Money/Money.vue'
+
+/**
+ * Product summary card: image, badge, title, price, description slot, and a
+ * footer slot for actions. The description slot renders text/VNodes only —
+ * deliberately no `v-html`. Shopify product descriptions arrive as
+ * merchant-authored HTML, which is a stored-XSS vector; the sanitisation
+ * boundary that makes that HTML renderable is an M3 (`sdk-commerce`)
+ * deliverable, and until it exists this card refuses raw HTML by design.
+ */
+withDefaults(
+  defineProps<{
+    /** Product title, rendered as the card heading. */
+    title: string
+    /** Price in the Money contract: Shopify-style decimal string or number, plus code. */
+    price: { amount: number | string; currency: string }
+    /** Product image URL; the card reserves the space either way. */
+    imageSrc?: string
+    /** Image alt text — required for a meaningful image (a11y). */
+    imageAlt?: string
+    /** Short callout rendered over the image, e.g. `'New'`, `'Sale'`. */
+    badge?: string
+    /** Skeleton state: hides content and marks the card busy. */
+    loading?: boolean
+  }>(),
+  { imageSrc: undefined, imageAlt: '', badge: undefined, loading: false },
+)
+
+const emit = defineEmits<{
+  /** Emitted when the card body is activated. */
+  select: []
+}>()
+</script>
+
+<template>
+  <article
+    data-testid="product-card"
+    :aria-busy="loading || undefined"
+    class="overflow-hidden rounded-lg border border-neutral-300 bg-neutral-50"
+  >
+    <template v-if="loading">
+      <div class="h-40 animate-pulse bg-neutral-200" />
+      <div class="space-y-2 p-4">
+        <div class="h-4 w-2/3 animate-pulse rounded bg-neutral-200" />
+        <div class="h-4 w-1/3 animate-pulse rounded bg-neutral-200" />
+      </div>
+    </template>
+    <template v-else>
+      <div class="relative">
+        <img
+          v-if="imageSrc"
+          :src="imageSrc"
+          :alt="imageAlt"
+          class="h-40 w-full object-cover"
+          loading="lazy"
+        />
+        <div v-else class="h-40 w-full bg-neutral-100" aria-hidden="true" />
+        <span
+          v-if="badge"
+          class="absolute left-2 top-2 rounded bg-brand-600 px-2 py-0.5 text-xs font-semibold text-neutral-50"
+        >
+          {{ badge }}
+        </span>
+      </div>
+      <div class="cursor-pointer p-4" @click="emit('select')">
+        <h3 class="text-sm font-semibold text-neutral-900">{{ title }}</h3>
+        <p class="mt-1 text-sm font-medium text-neutral-700">
+          <Money :amount="price.amount" :currency="price.currency" />
+        </p>
+        <div v-if="$slots.default" class="mt-2 text-sm text-neutral-500"><slot /></div>
+      </div>
+      <div v-if="$slots.footer" class="border-t border-neutral-200 p-3"><slot name="footer" /></div>
+    </template>
+  </article>
+</template>
