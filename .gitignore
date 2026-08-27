@@ -46,3 +46,6 @@ packages/tokens/dist/
 # throwaway federation spike — see docs/adr/0001
 spike/**/node_modules/
 spike/**/dist/
+
+# planning docs — local only, never committed
+docs/superpowers/
