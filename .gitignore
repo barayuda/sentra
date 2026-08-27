@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+storybook-static/
+*.tsbuildinfo
+
+# task runner caches
+.turbo/
+.cache/
+.vite/
+
+# environment — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# test & audit output
+coverage/
+.lighthouseci/
+playwright-report/
+test-results/
+blob-report/
+
+# editor / OS
+.DS_Store
+.idea/
+*.swp
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# rtk local cache
+.rtk/
