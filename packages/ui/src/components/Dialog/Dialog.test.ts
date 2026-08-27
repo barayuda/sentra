@@ -81,10 +81,11 @@ describe('Dialog', () => {
     await nextTick()
     await nextTick()
     const dialog = screen.getByRole('dialog')
-    // Authorized substitution (brief, Task 3 Step 4 note): happy-dom's
-    // focus-trap integration cannot reliably compute descendant tabbables,
-    // so this asserts the panel itself (tabindex="-1", the fallbackFocus
-    // target) received focus rather than `dialog.contains(activeElement)`.
-    expect(document.activeElement).toBe(dialog)
+    // The fallback focus call in Dialog.vue is conditional on containment,
+    // so either focus-trap's own initial-focus target (a real tabbable
+    // descendant, when present) or the panel fallback itself satisfies
+    // this broader containment check — it no longer requires (and cannot
+    // reward) an unconditional override of a real tabbable target.
+    expect(dialog.contains(document.activeElement)).toBe(true)
   })
 })

@@ -74,14 +74,18 @@ watch(
     if (open) {
       await Promise.resolve()
       activate()
-      // Belt-and-braces beyond `activate()`: happy-dom's tabbable
+      // Conditional fallback, not an override: happy-dom's tabbable
       // computation is unreliable enough that focus-trap's own internal
       // `.focus()` call sometimes silently no-ops under it (a documented
-      // environment risk, not a real-browser concern — activate() has
-      // already moved focus there in production). Calling `.focus()`
-      // directly on the fallback target is a harmless no-op when
-      // focus-trap already succeeded, and decisive when it didn't.
-      panelRef.value?.focus()
+      // environment risk, not a real-browser concern). The containment
+      // check means this only engages when nothing inside the panel
+      // already holds focus — so it can never steal focus away from a
+      // real tabbable element (e.g. a footer button) that activate()
+      // correctly focused; it only rescues the case where activate()
+      // left focus outside the panel entirely.
+      if (!panelRef.value?.contains(document.activeElement)) {
+        panelRef.value?.focus()
+      }
     } else {
       deactivate()
     }
