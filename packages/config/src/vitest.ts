@@ -50,7 +50,7 @@ export function defineVitestConfig(options: SentraVitestOptions = {}) {
       globals: false,
       coverage: {
         provider: 'v8' as const,
-        reporter: ['text', 'json-summary'] as const,
+        reporter: ['text', 'json-summary'],
         exclude: ['**/*.test.ts', '**/*.stories.ts', '**/dist/**'],
       },
     },
