@@ -17,6 +17,7 @@ export interface ColumnDef<Row> {
   /**
    * Derives the displayed value. Defaults to `row[key]`. The scoped cell
    * slot, when provided, wins over both.
+   * Method-shorthand syntax is deliberate: methods get bivariant parameter checking under strictFunctionTypes, which arrow-property syntax would reject when a concrete ColumnDef<Product> meets the generic constraint — do not "clean up" to the arrow form.
    */
   accessor?(row: Row): unknown
 }

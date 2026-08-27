@@ -111,10 +111,7 @@ export function renderCss(variables: readonly CssVariable[]): string {
  * @param variables - Flattened custom properties to emit inside the block.
  * @returns The CSS block, or an empty string when there is nothing to emit.
  */
-export function renderOverrideBlock(
-  selector: string,
-  variables: readonly CssVariable[],
-): string {
+export function renderOverrideBlock(selector: string, variables: readonly CssVariable[]): string {
   if (variables.length === 0) return ''
   const lines = variables.map((variable) => `  ${variable.name}: ${variable.value};`)
   return `${selector} {\n${lines.join('\n')}\n}\n`
