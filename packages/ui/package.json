@@ -22,7 +22,10 @@
     "vue": "^3.5.0"
   },
   "dependencies": {
-    "@sentra/tokens": "workspace:*"
+    "@sentra/tokens": "workspace:*",
+    "@vueuse/core": "14.4.0",
+    "@vueuse/integrations": "14.4.0",
+    "focus-trap": "8.2.2"
   },
   "devDependencies": {
     "@sentra/config": "workspace:*",
