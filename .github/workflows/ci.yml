@@ -50,6 +50,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Test tokens under Jest (ADR 0002)
+        run: pnpm --filter @sentra/tokens test:jest
+
       - name: Build Storybook
         run: pnpm --filter @sentra/ui storybook:build
 
