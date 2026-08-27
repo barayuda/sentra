@@ -4,3 +4,6 @@
 # still fully in scope.
 CLAUDE.md
 docs/
+
+# SDD controller scratch — gitignored, never formatted
+.superpowers/

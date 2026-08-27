@@ -33,6 +33,7 @@
     "@testing-library/vue": "8.1.0",
     "@types/react": "19.2.18",
     "@vitejs/plugin-vue": "6.0.8",
+    "@vitest/coverage-v8": "4.1.11",
     "@vue/test-utils": "2.4.11",
     "happy-dom": "20.11.8",
     "storybook": "10.5.10",
