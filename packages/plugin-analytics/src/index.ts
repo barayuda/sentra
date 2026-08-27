@@ -18,3 +18,5 @@ export {
   type AnalyticsPluginOptions,
 } from './plugin.ts'
 export { createTrackDirective, type TrackBinding } from './directive.ts'
+export { instrumentRouter } from './router.ts'
+export { captureWebVitals, type VitalMetric, type VitalsReporters } from './vitals.ts'
