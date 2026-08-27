@@ -43,11 +43,19 @@ const preview: Preview = {
     /**
      * Applies the mode attributes to the document root, matching how a real
      * application opts in — the token override blocks do the rest.
+     *
+     * The Vue3 decorator contract requires returning a component definition
+     * that renders the wrapped story via the `<story/>` placeholder — merely
+     * returning the `story` render function left it uninvoked, so every
+     * story's actual markup was replaced by the function's own source dump
+     * (e.g. `[object Object]` or a minified arrow function) in the DOM. That
+     * silently broke every play function and every a11y scan: both were
+     * inspecting decorator debris, not real component output.
      */
-    (story: unknown, context: { globals: { theme: string; density: string } }) => {
+    (_story: unknown, context: { globals: { theme: string; density: string } }) => {
       document.documentElement.setAttribute('data-theme', context.globals.theme)
       document.documentElement.setAttribute('data-density', context.globals.density)
-      return story
+      return { template: '<story/>' }
     },
   ],
 }

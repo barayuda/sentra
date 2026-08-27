@@ -59,3 +59,43 @@ jobs:
           name: storybook-static
           path: packages/ui/storybook-static
           retention-days: 7
+
+  # Runs every story's play function in a real browser and fails on any
+  # accessibility violation — the CI-blocking half of the a11y gate
+  # (spec §9's "Accessibility … enforced in CI"). @storybook/addon-a11y plus
+  # the `a11y: { test: 'error' }` preview parameter give the test runner
+  # built-in a11y checks on Storybook 9+, so no axe-playwright hook file is
+  # needed (that recipe is for Storybook 8 only, per the test-runner README).
+  interactions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm --filter @sentra/ui exec playwright install --with-deps chromium
+
+      - name: Build tokens and Storybook
+        run: pnpm --filter @sentra/tokens build && pnpm --filter @sentra/ui storybook:build
+
+      # The test runner assumes port 6006 by default; serving the static build
+      # and waiting for it keeps this job independent of the `verify` job's
+      # artifact upload, matching the @storybook/test-runner README's "Running
+      # against locally built Storybooks in CI" recipe.
+      - name: Run interaction and a11y tests
+        run: |
+          npx http-server packages/ui/storybook-static --port 6006 --silent &
+          npx wait-on tcp:6006
+          pnpm --filter @sentra/ui test:interactions

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import Combobox from './Combobox.vue'
 
 const countries = [
@@ -43,3 +44,15 @@ export const LoadError: Story = {
 }
 
 export const Disabled: Story = { args: { options: countries, disabled: true } }
+
+export const KeyboardSelection: Story = {
+  args: { options: countries },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const input = canvas.getByRole('combobox')
+    await userEvent.click(input)
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{Enter}')
+    await expect((input as HTMLInputElement).value).toBe('Singapore')
+    await expect(input.getAttribute('aria-expanded')).toBe('false')
+  },
+}

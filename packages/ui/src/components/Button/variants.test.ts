@@ -10,7 +10,7 @@ describe('buttonClasses', () => {
   })
 
   it('applies the danger background for the danger variant', () => {
-    expect(buttonClasses('danger', 'md')).toContain('bg-danger-500')
+    expect(buttonClasses('danger', 'md')).toContain('bg-danger-700')
   })
 
   it('gives the ghost variant no brand background', () => {

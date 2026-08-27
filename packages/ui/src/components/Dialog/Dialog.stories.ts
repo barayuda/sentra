@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import { ref } from 'vue'
 import Button from '../Button/Button.vue'
 import Dialog from './Dialog.vue'
@@ -34,4 +35,19 @@ export const Interactive: Story = {
       </Dialog>
     `,
   }),
+}
+
+export const TrapHoldsFocus: Story = {
+  ...Interactive,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Open dialog' }))
+    const body = within(document.body)
+    const dialog = await body.findByRole('dialog')
+    await expect(dialog.getAttribute('aria-modal')).toBe('true')
+    await userEvent.tab()
+    await expect(dialog.contains(document.activeElement)).toBe(true)
+    await userEvent.keyboard('{Escape}')
+    await expect(body.queryByRole('dialog')).toBeNull()
+  },
 }

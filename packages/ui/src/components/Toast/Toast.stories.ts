@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import Button from '../Button/Button.vue'
 import ToastHost from './ToastHost.vue'
 import { useToast } from './plugin.ts'
@@ -41,4 +42,14 @@ export const Playground: Story = {
       <ToastHost />
     `,
   }),
+}
+
+export const DangerAnnounces: Story = {
+  ...Playground,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Danger (sticky)' }))
+    const body = within(document.body)
+    await expect((await body.findByRole('alert')).textContent).toContain('Payment failed')
+  },
 }

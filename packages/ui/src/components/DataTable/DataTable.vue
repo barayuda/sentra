@@ -12,6 +12,14 @@ import type { ColumnDef } from './columns.ts'
  * structure carrying explicit table roles, with `aria-rowcount` advertising
  * the true total the DOM no longer shows.
  *
+ * The scroll viewport carries `role="rowgroup"` (not a bare div) so the
+ * `role="row"` elements it contains remain valid children of the outer
+ * `role="table"` per the ARIA table ownership chain; its own sizing spacer
+ * carries `role="presentation"` so that wrapper stays transparent in the
+ * same chain. The viewport also carries `tabindex="0"`, per WCAG technique
+ * G202, so keyboard users can focus and scroll it — both were flagged by
+ * the CI a11y gate (aria-required-children, scrollable-region-focusable).
+ *
  * Sorting is controlled: clicking a sortable header emits `update:sort`; the
  * parent reorders `rows` and reflects the state back through `sortKey` /
  * `sortDirection`. The table never mutates data it does not own.
@@ -115,8 +123,15 @@ function cellValue(row: Row, column: ColumnDef<Row>): unknown {
       <slot name="empty">No rows to display.</slot>
     </div>
 
-    <div v-else ref="scroller" class="overflow-auto" :style="{ height: `${heightPx}px` }">
-      <div class="relative" :style="{ height: `${totalHeight}px` }">
+    <div
+      v-else
+      ref="scroller"
+      role="rowgroup"
+      tabindex="0"
+      class="overflow-auto"
+      :style="{ height: `${heightPx}px` }"
+    >
+      <div role="presentation" class="relative" :style="{ height: `${totalHeight}px` }">
         <div
           v-for="virtualRow in virtualRows"
           :key="rows[virtualRow.index]!.id"
