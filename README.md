@@ -9,16 +9,18 @@ foundations here, independent deploy cadence at the edges.
 
 ## What's inside
 
-| Package          | What it does                                                                                                                                                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@sentra/tokens` | Design tokens as a typed TypeScript source of truth. A build step **generates** the CSS — a Tailwind 4 `@theme` block plus `:root` custom properties — so one edit propagates to every consumer. |
-| `@sentra/ui`     | Vue 3 component library (`Button`, `Input`, `Select`, `Checkbox`) with an enforced accessibility baseline, documented in Storybook where a11y violations fail the build.                         |
-| `@sentra/config` | Shared tool configuration: the strict `tsconfig` base every package extends and a Vitest config factory.                                                                                         |
+| Package                    | What it does                                                                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sentra/tokens`           | Design tokens as a typed TypeScript source of truth. A build step **generates** the CSS — a Tailwind 4 `@theme` block plus `:root` custom properties, dark and compact-density override blocks — so one edit propagates to every consumer.                    |
+| `@sentra/ui`               | Vue 3 component library — ten components (`Button`, `Input`, `Select`, `Checkbox`, `Combobox`, `Dialog`, `DataTable`, `Toast`, `Money`, `ProductCard`) with an enforced accessibility baseline, documented in Storybook where a11y violations fail the build. |
+| `@sentra/plugin-analytics` | Schema-validated, allowlist-only analytics as a Vue plugin — a field not named in the schema never leaves the page. Behavioural events and Web Vitals share one pipeline.                                                                                     |
+| `@sentra/config`           | Shared tool configuration: the strict `tsconfig` base every package extends and a Vitest config factory.                                                                                                                                                      |
 
 Each package has its own README covering what it does, how to use it, and what it depends
-on. Architecture decisions live in [`docs/adr/`](docs/adr/) — start with
-[ADR 0001](docs/adr/0001-federation-plugin-choice.md), which records the runtime
-micro-frontend evaluation (Module Federation on Vite) that shapes the application layer.
+on. Architecture decisions live in [`docs/adr/`](docs/adr/): [ADR 0001](docs/adr/0001-federation-plugin-choice.md)
+records the runtime micro-frontend evaluation (Module Federation on Vite) that shapes the
+application layer, and [ADR 0002](docs/adr/0002-vitest-and-jest.md) records the Vitest/Jest
+dual-runner decision, with the `tokens` suite as the running evidence.
 
 ## Getting started
 
@@ -27,7 +29,7 @@ Prerequisites: Node `>= 24.15.0` (see `.nvmrc`) and pnpm `>= 10.34.5`.
 ```bash
 pnpm install
 pnpm build        # generates tokens CSS, then builds the ui library
-pnpm test         # 68 tests across all packages
+pnpm test         # 146 tests across all packages; the tokens suite also passes under Jest (ADR 0002)
 pnpm --filter @sentra/ui storybook   # component workbench on :6006
 ```
 
@@ -60,8 +62,6 @@ static build is uploaded as an artifact on each run.
 
 ## Roadmap
 
-- Hard components: `Combobox`, `DataTable`, `Dialog`, `Toast` (plus domain components)
-- `@sentra/plugin-analytics` — a Vue plugin for user-behaviour tracking
 - `@sentra/sdk-commerce` — a typed Shopify Storefront client, mock-first via MSW
 - Runtime micro-frontend shell wiring per ADR 0001
 
