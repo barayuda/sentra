@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref: a push to a branch makes the previous
+# run's result irrelevant, and CI minutes are not free.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # --frozen-lockfile fails rather than silently updating the lockfile, so a
+      # dependency change must be committed deliberately. This is the supply-chain
+      # control from spec §10.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      # Builds run before typecheck because @sentra/ui's stylesheet imports
+      # @sentra/tokens' generated output, and vue-tsc resolves that import.
+      - name: Build
+        run: pnpm build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build Storybook
+        run: pnpm --filter @sentra/ui storybook:build
+
+      - name: Upload Storybook build
+        uses: actions/upload-artifact@v7
+        with:
+          name: storybook-static
+          path: packages/ui/storybook-static
+          retention-days: 7

@@ -39,3 +39,10 @@ pnpm-debug.log*
 
 # rtk local cache
 .rtk/
+
+# generated token stylesheet — regenerate with `pnpm --filter @sentra/tokens build`
+packages/tokens/dist/
+
+# throwaway federation spike — see docs/adr/0001
+spike/**/node_modules/
+spike/**/dist/

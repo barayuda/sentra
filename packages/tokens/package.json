@@ -1,0 +1,23 @@
+{
+  "name": "@sentra/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./dist/tokens.css"
+  },
+  "scripts": {
+    "build": "node scripts/build-css.ts",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sentra/config": "workspace:*",
+    "@types/node": "24.13.3",
+    "@vitest/coverage-v8": "4.1.11",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  }
+}
