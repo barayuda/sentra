@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Money from '../Money/Money.vue'
+import { FOCUS_CLASSES } from '../../shared/controls.ts'
 
 /**
  * Product summary card: image, badge, title, price, description slot, and a
@@ -8,6 +9,13 @@ import Money from '../Money/Money.vue'
  * merchant-authored HTML, which is a stored-XSS vector; the sanitisation
  * boundary that makes that HTML renderable is an M3 (`sdk-commerce`)
  * deliverable, and until it exists this card refuses raw HTML by design.
+ *
+ * The body's activation surface is a real `<button type="button">` rather
+ * than a `<div>` with a click handler: a `div` with `@click` is invisible to
+ * keyboard and assistive-technology users (unfocusable, unannounced), and
+ * static tools like axe cannot flag a bare click handler as the missing
+ * affordance it is. The button is styled `block w-full text-left` so it
+ * fills the same footprint and reads identically to the previous `div`.
  */
 withDefaults(
   defineProps<{
@@ -63,13 +71,17 @@ const emit = defineEmits<{
           {{ badge }}
         </span>
       </div>
-      <div class="cursor-pointer p-4" @click="emit('select')">
+      <button
+        type="button"
+        :class="[FOCUS_CLASSES, 'block w-full cursor-pointer p-4 text-left']"
+        @click="emit('select')"
+      >
         <h3 class="text-sm font-semibold text-neutral-900">{{ title }}</h3>
         <p class="mt-1 text-sm font-medium text-neutral-700">
           <Money :amount="price.amount" :currency="price.currency" />
         </p>
         <div v-if="$slots.default" class="mt-2 text-sm text-neutral-500"><slot /></div>
-      </div>
+      </button>
       <div v-if="$slots.footer" class="border-t border-neutral-200 p-3"><slot name="footer" /></div>
     </template>
   </article>

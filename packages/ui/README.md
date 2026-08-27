@@ -49,11 +49,14 @@ would outrank your unlayered rules by source order and break the guarantee.
 ### Theme and density
 
 Components read colour and spacing from the token custom properties `@sentra/tokens`
-generates; none of them branch on a mode prop. Setting `data-theme="dark"` on `<html>` (or
-any ancestor) swaps every colour token via the generated `:root[data-theme='dark']`
-override block, and `data-density="compact"` does the same for the spacing scale via
-`[data-density='compact']` — both are plain HTML attributes an application sets, not a
-Vue prop threaded through the tree:
+generates; none of them branch on a mode prop. Dark mode applies only via
+`data-theme="dark"` on the document root element (`<html>`) — the generated override
+block is scoped to `:root[data-theme='dark']`, which only ever matches the root, so
+setting the attribute on any other ancestor has no effect. Density is not so
+restricted: `data-density="compact"` swaps the spacing scale via `[data-density='compact']`,
+an ordinary attribute selector that matches on any ancestor, so it may be scoped to any
+subtree. Both are plain HTML attributes an application sets, not a Vue prop threaded
+through the tree:
 
 ```html
 <html data-theme="dark" data-density="compact"></html>

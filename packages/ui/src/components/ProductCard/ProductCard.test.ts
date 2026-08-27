@@ -37,8 +37,18 @@ describe('ProductCard', () => {
 
   it('emits select when the card body is clicked', async () => {
     const { emitted } = render(ProductCard, { props: baseProps })
-    await fireEvent.click(screen.getByRole('heading', { name: 'Aeropress Go' }))
+    // The base fixture renders no footer slot, so the activation button is
+    // the only button in the tree — safe to query by role alone.
+    await fireEvent.click(screen.getByRole('button'))
     expect(emitted('select')).toHaveLength(1)
+  })
+
+  it('exposes the activation surface as a focusable button', () => {
+    render(ProductCard, { props: baseProps })
+    const surface = screen.getByRole('button')
+    expect(surface.tagName).toBe('BUTTON')
+    surface.focus()
+    expect(document.activeElement).toBe(surface)
   })
 
   it('shows a skeleton and hides content while loading', () => {

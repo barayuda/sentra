@@ -97,8 +97,10 @@ jobs:
       # and waiting for it keeps this job independent of the `verify` job's
       # artifact upload, matching the @storybook/test-runner README's "Running
       # against locally built Storybooks in CI" recipe.
+      # `pnpm --filter <pkg> exec` runs with cwd set to the package directory,
+      # so the served path is relative to packages/ui, not the repo root.
       - name: Run interaction and a11y tests
         run: |
-          npx http-server packages/ui/storybook-static --port 6006 --silent &
-          npx wait-on tcp:6006
+          pnpm --filter @sentra/ui exec http-server storybook-static --port 6006 --silent &
+          pnpm --filter @sentra/ui exec wait-on tcp:6006
           pnpm --filter @sentra/ui test:interactions
