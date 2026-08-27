@@ -21,7 +21,15 @@ const VARIANT_CLASSES: Readonly<Record<Variant, string>> = {
   primary: 'bg-brand-600 text-neutral-0 hover:bg-brand-700',
   secondary: 'bg-neutral-100 text-neutral-900 hover:bg-neutral-200',
   ghost: 'bg-transparent text-brand-600 hover:bg-brand-50',
-  danger: 'bg-danger-500 text-neutral-0 hover:bg-danger-700',
+  /**
+   * `danger-500` against white text measures 3.76:1 — below the 4.5:1 WCAG AA
+   * threshold for normal text (confirmed by the interaction/a11y CI gate).
+   * `danger-700` is the only shade in the three-step danger scale
+   * (100/500/700) that clears it, at ~6.47:1, so it is the resting
+   * background; hover reuses it at 90% opacity for a visible-but-compliant
+   * state change rather than inventing an unreviewed darker token.
+   */
+  danger: 'bg-danger-700 text-neutral-0 hover:bg-danger-700/90',
 }
 
 /**

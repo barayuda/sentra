@@ -18,12 +18,18 @@ Build a Vitest config from the factory:
 
 ```ts
 import { defineVitestConfig } from '@sentra/config/vitest'
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vitest/config'
 
-export default defineVitestConfig({ environment: 'happy-dom' })
+export default defineConfig({
+  plugins: [vue()],
+  ...defineVitestConfig({ environment: 'happy-dom' }),
+})
 ```
 
 `environment` defaults to `node` and `setupFiles` defaults to `[]`, so a package with no
-DOM and no setup needs no arguments at all.
+DOM and no setup needs no arguments at all. A package with no plugins may skip
+`defineConfig` and `export default defineVitestConfig()` directly.
 
 A few base-config choices are load-bearing and will surprise you if you fight them:
 

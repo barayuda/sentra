@@ -1,0 +1,37 @@
+{
+  "name": "@sentra/plugin-analytics",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "vue-router": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vue-router": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "web-vitals": "6.2.1"
+  },
+  "devDependencies": {
+    "@sentra/config": "workspace:*",
+    "@vitejs/plugin-vue": "6.0.8",
+    "happy-dom": "20.11.8",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11",
+    "@vitest/coverage-v8": "4.1.11",
+    "vue": "3.5.42",
+    "vue-router": "5.3.0",
+    "@testing-library/vue": "8.1.0"
+  }
+}

@@ -7,3 +7,6 @@ docs/
 
 # SDD controller scratch — gitignored, never formatted
 .superpowers/
+
+# machine-generated
+pnpm-lock.yaml

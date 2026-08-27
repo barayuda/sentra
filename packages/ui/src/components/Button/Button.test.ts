@@ -40,6 +40,6 @@ describe('Button', () => {
 
   it('applies the variant class from the shared helper', () => {
     render(Button, { props: { variant: 'danger' }, slots: { default: 'Delete' } })
-    expect(screen.getByRole('button').className).toContain('bg-danger-500')
+    expect(screen.getByRole('button').className).toContain('bg-danger-700')
   })
 })

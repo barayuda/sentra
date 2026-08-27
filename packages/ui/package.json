@@ -13,21 +13,27 @@
   "scripts": {
     "build": "vite build",
     "test": "vitest run",
-    "lint": "eslint src",
+    "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit",
     "storybook": "storybook dev -p 6006",
-    "storybook:build": "storybook build"
+    "storybook:build": "storybook build",
+    "test:interactions": "test-storybook --url http://127.0.0.1:6006"
   },
   "peerDependencies": {
     "vue": "^3.5.0"
   },
   "dependencies": {
-    "@sentra/tokens": "workspace:*"
+    "@sentra/tokens": "workspace:*",
+    "@tanstack/vue-virtual": "3.13.36",
+    "@vueuse/core": "14.4.0",
+    "@vueuse/integrations": "14.4.0",
+    "focus-trap": "8.2.2"
   },
   "devDependencies": {
     "@sentra/config": "workspace:*",
     "@storybook/addon-a11y": "10.5.10",
     "@storybook/addon-docs": "10.5.10",
+    "@storybook/test-runner": "0.24.4",
     "@storybook/vue3-vite": "10.5.10",
     "@tailwindcss/vite": "4.3.3",
     "@testing-library/vue": "8.1.0",
@@ -36,6 +42,7 @@
     "@vitest/coverage-v8": "4.1.11",
     "@vue/test-utils": "2.4.11",
     "happy-dom": "20.11.8",
+    "http-server": "14.1.1",
     "storybook": "10.5.10",
     "tailwindcss": "4.3.3",
     "typescript": "npm:@typescript/typescript6@6.0.2",
@@ -43,6 +50,7 @@
     "vite-plugin-dts": "5.0.3",
     "vitest": "4.1.11",
     "vue": "3.5.42",
-    "vue-tsc": "3.3.11"
+    "vue-tsc": "3.3.11",
+    "wait-on": "9.1.0"
   }
 }
