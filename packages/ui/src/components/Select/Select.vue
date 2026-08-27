@@ -12,7 +12,7 @@ import type { SelectOption } from './options.ts'
  * (async search, multi-select with tags), and must match this component's
  * accessibility behaviour.
  */
-const props = withDefaults(
+withDefaults(
   defineProps<{
     /** Visible label text. Required — an unlabelled control is a defect. */
     label: string
