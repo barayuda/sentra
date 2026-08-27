@@ -1,0 +1,8 @@
+{
+  "extends": "@sentra/config/tsconfig-base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "types": ["vite/client"]
+  },
+  "include": ["src", "*.config.ts", ".storybook"]
+}

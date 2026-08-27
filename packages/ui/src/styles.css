@@ -1,0 +1,26 @@
+/**
+ * Sentra UI — stylesheet entry.
+ *
+ * Order is significant. Tailwind must observe the `@theme` block before it generates
+ * utilities, so tokens are imported first.
+ */
+@import '@sentra/tokens/tokens.css';
+@import 'tailwindcss';
+
+/**
+ * Layer strategy — why consumer styles win predictably.
+ *
+ * Tailwind 4 emits its own output inside cascade layers (`@layer theme` for the theme
+ * variables, `@layer utilities` for the generated utility classes). Every Sentra
+ * component styles itself exclusively with those utility classes, so all of this
+ * library's styling lives inside a cascade layer.
+ *
+ * CSS gives unlayered styles higher precedence than any layered style, regardless of
+ * specificity. A consumer therefore overrides any Sentra component with an ordinary
+ * unlayered rule — `.checkout-button { background: rebeccapurple }` beats our
+ * `bg-brand-600` — without specificity escalation, `!important`, or knowing our internals.
+ *
+ * The rule this imposes on us: never write unlayered CSS in this package. An unlayered
+ * rule here would outrank the consumer's own unlayered rules by source order alone, and
+ * quietly break that guarantee.
+ */
