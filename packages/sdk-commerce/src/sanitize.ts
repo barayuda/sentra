@@ -79,22 +79,37 @@ export const SANITIZE_ALLOWED_ATTR: readonly string[] = [
 ]
 
 /**
- * Forces `rel="noopener noreferrer"` on links that open a new context.
+ * Post-sanitisation hardening pass over the already-clean fragment.
  *
- * Without `noopener`, the opened page receives a `window.opener` handle to this
- * one and can navigate it — reverse tabnabbing, which turns a benign outbound
- * link in a description into a credential-phishing vector.
+ * Two jobs DOMPurify's allowlists do not cover:
  *
- * Safe by construction: the input has already been sanitised, and assigning to
- * a detached `<template>`'s `innerHTML` never executes script.
+ * 1. **Reverse tabnabbing.** Without `noopener`, a link opened in a new context
+ *    receives a `window.opener` handle to this page and can navigate it, turning
+ *    a benign outbound link in a description into a phishing vector.
+ * 2. **`data:` image URIs.** DOMPurify's default `DATA_URI_TAGS` includes `img`,
+ *    so a `data:` value in `src` bypasses the scheme check that blocks
+ *    `javascript:` on `href`. It is not script execution — browsers render
+ *    `<img>`-loaded SVG in image mode, without scripting or external fetches —
+ *    but it allows unbounded inline payloads and content spoofing from merchant
+ *    data, and Shopify serves genuine product imagery from its CDN, so nothing
+ *    legitimate is lost by refusing it.
+ *
+ * Safe by construction: the input has already been sanitised, and assigning to a
+ * detached `<template>`'s `innerHTML` never executes script or fetches a resource.
  *
  * @param html - Already-sanitised HTML.
  */
-function hardenLinks(html: string): string {
+function hardenFragment(html: string): string {
   const template = document.createElement('template')
   template.innerHTML = html
   for (const anchor of template.content.querySelectorAll('a[target]')) {
     anchor.setAttribute('rel', 'noopener noreferrer')
+  }
+  for (const element of template.content.querySelectorAll('[src]')) {
+    const src = element.getAttribute('src') ?? ''
+    /* Scheme test is case-insensitive and tolerates leading whitespace, both of
+       which browsers ignore when resolving a URL. */
+    if (/^\s*data:/i.test(src)) element.removeAttribute('src')
   }
   return template.innerHTML
 }
@@ -166,6 +181,8 @@ export function sanitizeProductHtml(html: UnsafeHtml): SafeHtml {
     /* Return a string, not a DOM node — the caller renders it. */
     RETURN_DOM: false,
     RETURN_DOM_FRAGMENT: false,
+    /* No String() coercion needed: RETURN_DOM/RETURN_DOM_FRAGMENT false selects
+       DOMPurify's plain-string overload. */
     /* KEEP_CONTENT is left at DOMPurify's default (true) deliberately, even
        though "drop the contents of removed elements" sounds like it wants
        false. It doesn't: 'script', 'style', 'iframe' and the rest of
@@ -179,5 +196,5 @@ export function sanitizeProductHtml(html: UnsafeHtml): SafeHtml {
        Measured directly against dompurify@3.4.14: with KEEP_CONTENT:false,
        sanitising '<p>Hi</p>' alone returns '<p></p>'. */
   })
-  return hardenLinks(sanitized) as SafeHtml
+  return hardenFragment(sanitized) as SafeHtml
 }

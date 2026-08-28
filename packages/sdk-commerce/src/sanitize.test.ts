@@ -67,6 +67,22 @@ describe('sanitizeProductHtml', () => {
     expect(clean('<a href="https://example.com">Docs</a>')).not.toContain('rel=')
   })
 
+  it('strips data: URIs from image sources', () => {
+    const result = clean('<img src="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=" alt="x">')
+    expect(result).not.toContain('data:')
+    expect(result).toContain('<img')
+  })
+
+  it('strips data: URIs regardless of case or leading whitespace', () => {
+    /* Browsers ignore both when resolving a URL, so the filter must too. */
+    expect(clean('<img src="  DaTa:image/svg+xml,<svg/>" alt="x">')).not.toContain('ata:')
+  })
+
+  it('leaves ordinary CDN image sources intact', () => {
+    const url = 'https://cdn.shopify.com/s/files/1/0001/mug.jpg?width=600'
+    expect(clean(`<img src="${url}" alt="A mug">`)).toContain(url)
+  })
+
   it('is idempotent on already-sanitised output', () => {
     const once = clean('<p>Thrown by <strong>hand</strong>.</p><script>x()</script>')
     expect(clean(once)).toBe(once)
