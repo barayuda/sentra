@@ -100,13 +100,18 @@ function hardenLinks(html: string): string {
 }
 
 /**
- * A probe every working sanitiser must neutralise.
+ * A payload every working sanitiser must neutralise.
  *
- * Deliberately not a `<script>` tag: an inline event handler is the harder case
- * for a broken DOM shim, because stripping it requires walking attributes
- * rather than dropping a node type.
+ * Multi-root by necessity, not by style. Measured against dompurify@3.4.14:
+ * under happy-dom, every SINGLE-root payload — a lone `<script>`, a lone
+ * `<iframe>`, a lone `javascript:` href, a lone inline handler — is stripped
+ * correctly, and only a payload with more than one root node exposes the
+ * failure. A single-element probe therefore reports health in precisely the
+ * environment that is broken. It also carries two markers, one requiring node
+ * removal and one requiring attribute removal, so a partial failure cannot
+ * slip through either.
  */
-const SELF_TEST_PROBE = '<img src=x onerror=1>'
+export const SELF_TEST_PROBE = '<p>a</p><script>1</script><img src=x onerror=1>'
 
 /** Set once the environment has been proven to sanitise. */
 let sanitiserVerified = false
@@ -128,9 +133,9 @@ let sanitiserVerified = false
 function assertSanitiserWorks(): void {
   if (sanitiserVerified) return
   const probe = String(
-    DOMPurify.sanitize(SELF_TEST_PROBE, { ALLOWED_TAGS: ['img'], ALLOWED_ATTR: ['src'] }),
+    DOMPurify.sanitize(SELF_TEST_PROBE, { ALLOWED_TAGS: ['p', 'img'], ALLOWED_ATTR: ['src'] }),
   )
-  if (probe.includes('onerror')) {
+  if (probe.includes('<script') || probe.includes('onerror')) {
     throw new Error(
       'sanitizeProductHtml: DOMPurify is not sanitising in this environment. ' +
         'Refusing to render merchant-authored HTML. Note that DOMPurify.isSupported ' +

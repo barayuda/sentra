@@ -7,7 +7,7 @@
  * DOMPurify's own test suite targets, and it neutralises all of them.
  */
 import { describe, expect, it } from 'vitest'
-import { sanitizeProductHtml } from './sanitize.ts'
+import { SELF_TEST_PROBE, sanitizeProductHtml } from './sanitize.ts'
 import { asUnsafeHtml } from './types.ts'
 
 /** Sanitises a raw string, handling the branding for brevity. */
@@ -82,5 +82,18 @@ describe('sanitizeProductHtml', () => {
 
   it('runs its environment self-test without throwing under a working DOM', () => {
     expect(() => clean('<p>ok</p>')).not.toThrow()
+  })
+
+  it('uses a self-test probe that a broken DOM would actually fail', () => {
+    /**
+     * Guards the guard. The probe must be multi-root: measured against
+     * dompurify@3.4.14, happy-dom sanitises every single-root payload correctly
+     * and only leaks with more than one root node, so a single-element probe
+     * would report health in exactly the environment that is broken.
+     */
+    const roots = SELF_TEST_PROBE.match(/<[a-z]/g) ?? []
+    expect(roots.length).toBeGreaterThan(1)
+    expect(SELF_TEST_PROBE).toContain('<script')
+    expect(SELF_TEST_PROBE).toContain('onerror')
   })
 })
