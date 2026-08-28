@@ -16,12 +16,12 @@ function makeRouter() {
 }
 
 describe('instrumentRouter', () => {
-  it('tracks a page_view after each navigation', async () => {
+  it('tracks the route path without the query string', async () => {
     const send = vi.fn()
     const client = createAnalytics({ schema: { page_view: ['path', 'name'] }, transport: { send } })
     const router = makeRouter()
     instrumentRouter(router, client)
-    await router.push('/products')
+    await router.push('/products?q=secret-term&email=a@b.com')
     expect(send).toHaveBeenCalledWith([
       expect.objectContaining({
         name: 'page_view',

@@ -22,8 +22,16 @@ const props = withDefaults(
   { locale: undefined },
 )
 
-/** Parsed major-unit value, or null when the input is not a number. */
+/**
+ * Parsed major-unit value, or null when the input is not a number.
+ *
+ * The explicit empty/whitespace check exists because `Number('')` and
+ * `Number('   ')` are both `0`, not `NaN` — so an absent price would
+ * otherwise render as a confident "$0.00" instead of the em-dash that
+ * signals "no value".
+ */
 const numericAmount = computed<number | null>(() => {
+  if (typeof props.amount === 'string' && props.amount.trim() === '') return null
   const value = typeof props.amount === 'string' ? Number(props.amount) : props.amount
   return Number.isFinite(value) ? value : null
 })

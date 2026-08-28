@@ -31,4 +31,14 @@ describe('Money', () => {
     render(Money, { props: { amount: 'not-a-number', currency: 'USD', locale: 'en-US' } })
     expect(screen.getByTestId('money').textContent).toBe('—')
   })
+
+  it('renders an em-dash for an empty amount string rather than zero', () => {
+    const { getByTestId } = render(Money, { props: { amount: '', currency: 'USD' } })
+    expect(getByTestId('money').textContent).toBe('—')
+  })
+
+  it('renders an em-dash for a whitespace-only amount', () => {
+    const { getByTestId } = render(Money, { props: { amount: '   ', currency: 'USD' } })
+    expect(getByTestId('money').textContent).toBe('—')
+  })
 })

@@ -136,6 +136,18 @@ function onKeydown(event: KeyboardEvent): void {
       break
     case 'ArrowUp':
       event.preventDefault()
+      /**
+       * ARIA APG: from a closed state, Up Arrow opens the listbox and
+       * activates the LAST option (Down Arrow activates the first). The
+       * previous `Math.max(activeIndex - 1, 0)` silently activated option 0
+       * while the listbox stayed closed, so `aria-activedescendant` pointed
+       * at an element that was not in the accessibility tree.
+       */
+      if (!isOpen.value) {
+        open()
+        activeIndex.value = max
+        break
+      }
       activeIndex.value = Math.max(activeIndex.value - 1, 0)
       break
     case 'Home':
@@ -191,7 +203,7 @@ function onKeydown(event: KeyboardEvent): void {
         role="listbox"
         :aria-label="label"
         :aria-busy="isLoading || undefined"
-        class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-md"
+        class="absolute z-[var(--z-index-dropdown)] mt-1 max-h-60 w-full overflow-auto rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-md"
       >
         <li v-if="isLoading" class="px-3 py-2 text-sm text-neutral-500">Loading…</li>
         <li
