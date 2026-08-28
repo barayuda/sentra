@@ -1,4 +1,13 @@
 import type { StorefrontResult } from './errors.ts'
+import {
+  addCartLines,
+  createCart,
+  getCart,
+  removeCartLines,
+  updateCartLines,
+  type CartLineInput,
+  type CartLineUpdate,
+} from './operations/cart.ts'
 import { getCollection, type GetCollectionInput } from './operations/collections.ts'
 import { getProduct, type GetProductInput } from './operations/products.ts'
 import {
@@ -6,7 +15,7 @@ import {
   type StorefrontTransport,
   type StorefrontTransportOptions,
 } from './transport.ts'
-import type { CollectionPage, ProductDetail } from './types.ts'
+import type { Cart, CollectionPage, ProductDetail } from './types.ts'
 import { STOREFRONT_API_VERSION } from './version.ts'
 
 /** Configuration for {@link createStorefrontClient}. */
@@ -40,6 +49,20 @@ export interface StorefrontClient {
   readonly transport: StorefrontTransport
   getProduct(input: GetProductInput): Promise<StorefrontResult<ProductDetail | null>>
   getCollection(input: GetCollectionInput): Promise<StorefrontResult<CollectionPage>>
+  createCart(input: { readonly lines?: readonly CartLineInput[] }): Promise<StorefrontResult<Cart>>
+  getCart(input: { readonly cartId: string }): Promise<StorefrontResult<Cart | null>>
+  addCartLines(input: {
+    readonly cartId: string
+    readonly lines: readonly CartLineInput[]
+  }): Promise<StorefrontResult<Cart>>
+  updateCartLines(input: {
+    readonly cartId: string
+    readonly lines: readonly CartLineUpdate[]
+  }): Promise<StorefrontResult<Cart>>
+  removeCartLines(input: {
+    readonly cartId: string
+    readonly lineIds: readonly string[]
+  }): Promise<StorefrontResult<Cart>>
 }
 
 /**
@@ -74,5 +97,10 @@ export function createStorefrontClient(options: StorefrontClientOptions): Storef
     transport,
     getProduct: (input) => getProduct(transport, input),
     getCollection: (input) => getCollection(transport, input),
+    createCart: (input) => createCart(transport, input),
+    getCart: (input) => getCart(transport, input),
+    addCartLines: (input) => addCartLines(transport, input),
+    updateCartLines: (input) => updateCartLines(transport, input),
+    removeCartLines: (input) => removeCartLines(transport, input),
   }
 }

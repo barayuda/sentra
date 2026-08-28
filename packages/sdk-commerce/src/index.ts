@@ -47,4 +47,13 @@ export {
 } from './client.ts'
 export { getProduct, type GetProductInput } from './operations/products.ts'
 export { getCollection, type GetCollectionInput } from './operations/collections.ts'
+export {
+  createCart,
+  getCart,
+  addCartLines,
+  updateCartLines,
+  removeCartLines,
+  type CartLineInput,
+  type CartLineUpdate,
+} from './operations/cart.ts'
 export { SchemaViolation } from './operations/assert.ts'
