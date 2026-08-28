@@ -15,6 +15,8 @@ baseline and a Storybook page, grouped by role:
 - **Data** — `DataTable`. Virtualised rows, slot-driven extensibility, a typed column API.
 - **Feedback** — `Toast`. An imperative API surfaced through a plugin install.
 - **Domain** — `Money`, `ProductCard`. Currency and locale formatting, domain composition.
+  `ProductCard` accepts an optional `imageSrcset` prop for responsive image candidates,
+  paired with `imageSrc` as the fallback source.
 
 ## How to use it
 
