@@ -171,7 +171,14 @@ describe('CartDrawer', () => {
     } as Partial<StorefrontClient>)
     const increase = await findByRole('button', { name: /increase quantity/i })
     increase.click()
-    expect(await findByText(/couldn't reach the store/i)).toBeTruthy()
+    /*
+     * Asserts on `errorCopy`'s `.detail` text, not `.title`: `CartDrawer`'s
+     * failure banner is a non-blocking inline alert (the lines stay
+     * rendered, nothing is discarded), matching `CollectionView.vue`'s
+     * `inlineError` shape — `role="alert"` with `copy.detail` alone, no
+     * title. That is the app's one coherent inline-error pattern.
+     */
+    expect(await findByText(/check your connection/i)).toBeTruthy()
     expect(await findByText('Stoneware Mug No. 1')).toBeTruthy()
   })
 })

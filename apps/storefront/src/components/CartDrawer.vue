@@ -57,10 +57,7 @@ async function remove(lineId: string, quantity: number): Promise<void> {
     </div>
 
     <div v-else class="flex flex-col gap-4">
-      <div v-if="failure" role="alert" class="text-sm text-danger-700">
-        <p class="font-medium">{{ failure.title }}</p>
-        <p>{{ failure.detail }}</p>
-      </div>
+      <p v-if="failure" role="alert" class="text-sm text-danger-700">{{ failure.detail }}</p>
 
       <ul class="flex flex-col gap-4">
         <li v-for="line in cart.lines" :key="line.id" class="flex gap-3">
