@@ -104,3 +104,49 @@ jobs:
           pnpm --filter @sentra/ui exec http-server storybook-static --port 6006 --silent &
           pnpm --filter @sentra/ui exec wait-on tcp:6006
           pnpm --filter @sentra/ui test:interactions
+
+  # Runs one happy path through the *built* storefront in a real browser. The
+  # dev server is not exercised here on purpose: this job's value is proving the
+  # production bundle, its code splitting, and the committed Service Worker all
+  # work together, which a dev-server run cannot show.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # @playwright/test is a direct devDependency of the storefront so its bin
+      # is linked on a clean frozen install — pnpm does not link transitive
+      # bins, which is what broke the interactions job when `playwright` was
+      # only a transitive dependency.
+      - name: Install Playwright browser
+        run: pnpm --filter @sentra/storefront exec playwright install --with-deps chromium
+
+      # sdk-commerce's build step generates the types the app imports, so the
+      # workspace build must run before the app can be built by Playwright's
+      # webServer command.
+      - name: Build workspace packages
+        run: pnpm build
+
+      - name: Run E2E smoke tests
+        run: pnpm --filter @sentra/storefront e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: apps/storefront/playwright-report
+          retention-days: 7
