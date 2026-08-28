@@ -56,4 +56,30 @@ describe('ProductCard', () => {
     expect(screen.getByTestId('product-card').getAttribute('aria-busy')).toBe('true')
     expect(screen.queryByRole('heading')).toBeNull()
   })
+
+  it('passes a srcset through to the image when given', () => {
+    const { getByTestId } = render(ProductCard, {
+      props: {
+        title: 'Mug',
+        price: { amount: '19.00', currency: 'USD' },
+        imageSrc: 'https://cdn.example/mug.jpg?width=600',
+        imageAlt: 'A mug',
+        imageSrcset: 'https://cdn.example/mug.jpg?width=400 400w',
+      },
+    })
+    const image = getByTestId('product-card').querySelector('img')
+    expect(image?.getAttribute('srcset')).toContain('400w')
+    expect(image?.getAttribute('sizes')).toContain('vw')
+  })
+
+  it('omits srcset when none is given', () => {
+    const { getByTestId } = render(ProductCard, {
+      props: {
+        title: 'Mug',
+        price: { amount: '19.00', currency: 'USD' },
+        imageSrc: 'https://cdn.example/mug.jpg',
+      },
+    })
+    expect(getByTestId('product-card').querySelector('img')?.hasAttribute('srcset')).toBe(false)
+  })
 })
