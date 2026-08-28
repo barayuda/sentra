@@ -115,16 +115,38 @@ function toCents(amount: string): number {
 
 /** Builds the wire `Cart` payload for a mock cart. */
 export function toWireCart(cart: MockCart): unknown {
-  const lines = cart.lines.flatMap((line) => {
+  /**
+   * Lines whose variant still resolves, and the single source for all three
+   * totals below.
+   *
+   * Computing `lines`, `subtotal` and `totalQuantity` from separate passes let
+   * them disagree: an unresolvable variant was dropped from two of them and
+   * counted in the third, so a cart could report a nonzero item count with an
+   * empty line list. Deriving all three from one filtered list makes that
+   * inconsistency unrepresentable rather than merely untested.
+   */
+  const resolved = cart.lines.flatMap((line) => {
     const product: WireProduct | undefined = FIXTURE_VARIANT_INDEX.get(line.merchandiseId)
+    const variant = product?.variants.edges.find((edge) => edge.node.id === line.merchandiseId)
     /* An unknown variant is dropped rather than faked: a cart line pointing at
        a product that does not exist is exactly the schema-error case, and
        inventing data here would hide it. */
-    if (!product) return []
-    const variant = product.variants.edges.find((edge) => edge.node.id === line.merchandiseId)
-    if (!variant) return []
-    return [
-      {
+    if (!product || !variant) return []
+    return [{ line, product, variant }]
+  })
+
+  const subtotalCents = resolved.reduce(
+    (total, { line, variant }) => total + toCents(variant.node.price.amount) * line.quantity,
+    0,
+  )
+
+  return {
+    id: cart.id,
+    checkoutUrl: `https://${MOCK_SHOP_DOMAIN}/cart/c/${cart.id.split('/').pop() ?? 'mock'}`,
+    totalQuantity: resolved.reduce((total, { line }) => total + line.quantity, 0),
+    cost: { subtotalAmount: { amount: toDecimal(subtotalCents), currencyCode: MOCK_CURRENCY } },
+    lines: {
+      edges: resolved.map(({ line, product, variant }) => ({
         node: {
           id: line.id,
           quantity: line.quantity,
@@ -136,22 +158,7 @@ export function toWireCart(cart: MockCart): unknown {
             product: { title: product.title, handle: product.handle },
           },
         },
-      },
-    ]
-  })
-
-  const subtotalCents = cart.lines.reduce((total, line) => {
-    const product = FIXTURE_VARIANT_INDEX.get(line.merchandiseId)
-    const variant = product?.variants.edges.find((edge) => edge.node.id === line.merchandiseId)
-    if (!variant) return total
-    return total + toCents(variant.node.price.amount) * line.quantity
-  }, 0)
-
-  return {
-    id: cart.id,
-    checkoutUrl: `https://${MOCK_SHOP_DOMAIN}/cart/c/${cart.id.split('/').pop() ?? 'mock'}`,
-    totalQuantity: cart.lines.reduce((total, line) => total + line.quantity, 0),
-    cost: { subtotalAmount: { amount: toDecimal(subtotalCents), currencyCode: MOCK_CURRENCY } },
-    lines: { edges: lines },
+      })),
+    },
   }
 }

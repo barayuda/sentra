@@ -167,6 +167,22 @@ describe('cart lifecycle', () => {
     const result = await client().getCart({ cartId: 'gid://shopify/Cart/nope' })
     expect(result).toEqual({ ok: true, value: null })
   })
+
+  it('keeps quantity, lines and subtotal consistent when a variant does not resolve', async () => {
+    /**
+     * A cart line pointing at an unknown variant is dropped from the line list.
+     * The item count and subtotal must drop it too — a cart reporting a nonzero
+     * quantity with no lines would surface downstream as a header badge above an
+     * empty drawer.
+     */
+    const created = await client().createCart({
+      lines: [{ merchandiseId: 'gid://shopify/ProductVariant/does-not-exist', quantity: 3 }],
+    })
+    if (!created.ok) throw new Error('create failed')
+    expect(created.value.lines).toEqual([])
+    expect(created.value.totalQuantity).toBe(0)
+    expect(created.value.subtotal.amount).toBe('0.00')
+  })
 })
 
 describe('failure scenarios', () => {
