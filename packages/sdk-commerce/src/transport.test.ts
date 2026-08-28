@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { RequestCost } from './errors.ts'
+import type { RequestCost, StorefrontError, StorefrontResult } from './errors.ts'
 import { createStorefrontTransport, retryDelayMs } from './transport.ts'
 
 const ENDPOINT = 'https://demo-shop.myshopify.com/api/2026-04/graphql.json'
@@ -11,6 +11,21 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   })
+}
+
+/**
+ * Asserts the result is a failure and returns its error.
+ *
+ * A bare `if (!result.ok) { … }` guard silently passes when the result is a
+ * success — the assertions inside simply never run — so a regression that
+ * returned `ok` or the wrong error kind would look identical to a fix. This
+ * throws instead, which is what makes these tests able to fail.
+ */
+function expectFailure(result: StorefrontResult<unknown>): StorefrontError {
+  if (result.ok) {
+    throw new Error(`expected a failure, received ok(${JSON.stringify(result.value)})`)
+  }
+  return result.error
 }
 
 const COST = {
@@ -93,11 +108,9 @@ describe('createStorefrontTransport', () => {
     const transport = transportWith(fetchImpl, { timeoutMs: 5, maxAttempts: 1 })
 
     const result = await transport.request(DOCUMENT)
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error.kind).toBe('network')
-      expect(result.error.message).toContain('timed out after 5ms')
-    }
+    const error = expectFailure(result)
+    expect(error).toMatchObject({ kind: 'network' })
+    expect(error.message).toContain('timed out after 5ms')
   })
 
   it('retries a transport failure up to maxAttempts and reports the count', async () => {
@@ -108,11 +121,9 @@ describe('createStorefrontTransport', () => {
 
     const result = await transport.request(DOCUMENT)
     expect(fetchImpl).toHaveBeenCalledTimes(3)
-    expect(result.ok).toBe(false)
-    if (!result.ok && result.error.kind === 'network') {
-      expect(result.error.attempts).toBe(3)
-      expect(result.error.message).toContain('ECONNRESET')
-    }
+    const error = expectFailure(result)
+    expect(error).toMatchObject({ kind: 'network', attempts: 3 })
+    expect(error.message).toContain('ECONNRESET')
   })
 
   it('succeeds on a retry after a transient failure', async () => {
@@ -135,9 +146,7 @@ describe('createStorefrontTransport', () => {
 
     const result = await transport.request(DOCUMENT)
     expect(fetchImpl).toHaveBeenCalledTimes(2)
-    if (!result.ok && result.error.kind === 'network') {
-      expect(result.error.status).toBe(503)
-    }
+    expect(expectFailure(result)).toMatchObject({ kind: 'network', status: 503 })
   })
 
   it('does not retry a 4xx response', async () => {
@@ -146,10 +155,7 @@ describe('createStorefrontTransport', () => {
 
     const result = await transport.request(DOCUMENT)
     expect(fetchImpl).toHaveBeenCalledTimes(1)
-    if (!result.ok && result.error.kind === 'network') {
-      expect(result.error.status).toBe(401)
-      expect(result.error.attempts).toBe(1)
-    }
+    expect(expectFailure(result)).toMatchObject({ kind: 'network', status: 401, attempts: 1 })
   })
 
   it('treats HTTP 430 as throttling and retries it', async () => {
@@ -160,7 +166,7 @@ describe('createStorefrontTransport', () => {
 
     const result = await transport.request(DOCUMENT)
     expect(fetchImpl).toHaveBeenCalledTimes(2)
-    if (!result.ok) expect(result.error.kind).toBe('throttled')
+    expect(expectFailure(result)).toMatchObject({ kind: 'throttled' })
   })
 
   it('treats a THROTTLED graphql error as throttling and carries the budget', async () => {
@@ -175,9 +181,7 @@ describe('createStorefrontTransport', () => {
 
     const result = await transport.request(DOCUMENT)
     expect(fetchImpl).toHaveBeenCalledTimes(2)
-    if (!result.ok && result.error.kind === 'throttled') {
-      expect(result.error.throttleStatus).toEqual(throttleStatus)
-    }
+    expect(expectFailure(result)).toMatchObject({ kind: 'throttled', throttleStatus })
   })
 
   it('maps other top-level graphql errors to a schema error', async () => {
@@ -186,20 +190,16 @@ describe('createStorefrontTransport', () => {
         errors: [{ message: "Field 'nope' doesn't exist on type 'Product'" }],
       })) as unknown as typeof fetch)
     const result = await transport.request(DOCUMENT)
-    if (!result.ok) {
-      expect(result.error.kind).toBe('schema')
-      expect(result.error.message).toContain("Field 'nope'")
-    }
+    const error = expectFailure(result)
+    expect(error).toMatchObject({ kind: 'schema' })
+    expect(error.message).toContain("Field 'nope'")
   })
 
   it('maps a null data payload to a schema error', async () => {
     const transport = transportWith((async () =>
       jsonResponse({ data: null })) as unknown as typeof fetch)
     const result = await transport.request(DOCUMENT)
-    if (!result.ok && result.error.kind === 'schema') {
-      expect(result.error.kind).toBe('schema')
-      expect(result.error.path).toBe('$.data')
-    }
+    expect(expectFailure(result)).toMatchObject({ kind: 'schema', path: '$.data' })
   })
 
   it('maps an unparseable body to a schema error', async () => {
@@ -208,10 +208,9 @@ describe('createStorefrontTransport', () => {
         new Response('<html>gateway</html>', { status: 200 })) as unknown as typeof fetch,
     )
     const result = await transport.request(DOCUMENT)
-    if (!result.ok) {
-      expect(result.error.kind).toBe('schema')
-      expect(result.error.message).toContain('not valid JSON')
-    }
+    const error = expectFailure(result)
+    expect(error).toMatchObject({ kind: 'schema' })
+    expect(error.message).toContain('not valid JSON')
   })
 
   it('waits between retries using the injected sleep', async () => {
