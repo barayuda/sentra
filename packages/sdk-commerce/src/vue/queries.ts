@@ -156,6 +156,16 @@ export function useCollection(
   const hasNextPage = computed(() => !exhausted.value)
 
   /**
+   * Invalidates in-flight loads. A boolean `loading` flag alone is not enough:
+   * when the handle changes mid-request, `reset()` must both release the guard
+   * so the new collection is actually fetched, and mark the outstanding
+   * response stale so it cannot write the previous collection's products over
+   * the new one. This is the same protection `useStorefrontQuery` applies with
+   * its request token.
+   */
+  let generation = 0
+
+  /**
    * Fetches one page.
    *
    * @param after - Cursor, or null for the first page.
@@ -163,8 +173,10 @@ export function useCollection(
    */
   async function load(after: string | null, append: boolean): Promise<void> {
     if (loading.value) return
+    const current = (generation += 1)
     loading.value = true
     const result = await client.getCollection({ handle: toValue(handle), first: pageSize, after })
+    if (current !== generation) return
     loading.value = false
     if (!result.ok) {
       error.value = result.error
@@ -183,6 +195,8 @@ export function useCollection(
   }
 
   async function reset(): Promise<void> {
+    generation += 1
+    loading.value = false
     products.value = []
     cursor.value = null
     exhausted.value = false

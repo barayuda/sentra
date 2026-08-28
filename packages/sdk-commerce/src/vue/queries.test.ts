@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { StorefrontClient } from '../client.ts'
 import type { StorefrontResult } from '../errors.ts'
 import type { CollectionPage, ProductDetail } from '../types.ts'
-import { STOREFRONT_INJECTION_KEY } from './plugin.ts'
+import { STOREFRONT_INJECTION_KEY, useStorefront } from './plugin.ts'
 import { useCollection, useProduct, useStorefrontQuery } from './queries.ts'
 
 /**
@@ -293,6 +293,44 @@ describe('useCollection', () => {
     stop()
   })
 
+  it('discards a superseded collection load when the handle changes mid-flight', async () => {
+    const resolvers: ((value: StorefrontResult<CollectionPage>) => void)[] = []
+    const requested: string[] = []
+    const getCollection = vi.fn(
+      (input: { handle: string; first: number; after?: string | null }) => {
+        requested.push(input.handle)
+        return new Promise<StorefrontResult<CollectionPage>>((resolve) => resolvers.push(resolve))
+      },
+    )
+    const handle = ref('tableware')
+    const { result, stop } = withStorefront({ getCollection }, () =>
+      useCollection(handle, { pageSize: 1 }),
+    )
+
+    await nextTick()
+    expect(requested).toEqual(['tableware'])
+
+    handle.value = 'lighting'
+    await nextTick()
+    /* The handle change must issue its own request even though the first is
+       still in flight — this is the assertion that fails without the fix. */
+    expect(requested).toEqual(['tableware', 'lighting'])
+
+    /* Resolve the STALE request last: it must not overwrite the new collection. */
+    resolvers[1]?.({
+      ok: true,
+      value: { ...page(['L1'], false, null), handle: 'lighting', title: 'Lighting' },
+    })
+    resolvers[0]?.({
+      ok: true,
+      value: { ...page(['T1'], false, null), handle: 'tableware', title: 'Tableware' },
+    })
+
+    await vi.waitFor(() => expect(result.title.value).toBe('Lighting'))
+    expect(result.products.value.map((product) => product.id)).toEqual(['L1'])
+    stop()
+  })
+
   it('surfaces a failed page load without losing loaded products', async () => {
     let succeed = true
     const getCollection = vi.fn(async (): Promise<StorefrontResult<CollectionPage>> =>
@@ -314,8 +352,8 @@ describe('useCollection', () => {
 })
 
 describe('useStorefront', () => {
-  it('throws a message naming the fix when the plugin is missing', async () => {
-    const { useStorefront } = await import('./plugin.ts')
-    expect(() => useStorefront()).toThrow(/storefrontPlugin/)
+  it('throws a message naming the fix when the plugin is missing', () => {
+    const app = createApp({ render: () => null })
+    expect(() => app.runWithContext(() => useStorefront())).toThrow(/storefrontPlugin/)
   })
 })

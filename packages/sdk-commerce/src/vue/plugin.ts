@@ -37,7 +37,10 @@ export const storefrontPlugin: Plugin<[StorefrontPluginOptions]> = {
  * @throws When the plugin is not installed — the message names the fix.
  */
 export function useStorefront(): StorefrontClient {
-  const client = inject(STOREFRONT_INJECTION_KEY)
+  /* A default suppresses inject()'s "not found" warning while preserving the
+     throw below — the warning is noise here because the caller-facing error
+     message already names the fix. */
+  const client = inject(STOREFRONT_INJECTION_KEY, null)
   if (!client) {
     throw new Error('useStorefront() requires app.use(storefrontPlugin, { client }) before mount.')
   }
