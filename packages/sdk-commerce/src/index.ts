@@ -39,3 +39,12 @@ export {
   type StorefrontTransport,
   type StorefrontTransportOptions,
 } from './transport.ts'
+export {
+  createStorefrontClient,
+  storefrontEndpoint,
+  type StorefrontClient,
+  type StorefrontClientOptions,
+} from './client.ts'
+export { getProduct, type GetProductInput } from './operations/products.ts'
+export { getCollection, type GetCollectionInput } from './operations/collections.ts'
+export { SchemaViolation } from './operations/assert.ts'
