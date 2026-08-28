@@ -22,10 +22,11 @@ test.describe('storefront happy path', () => {
     await expect(page).toHaveURL(/\/products\//)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
-    /* The description renders as formatted text — and its script never ran. */
+    /* The description renders as formatted text — and neither payload fired. */
     const description = page.getByTestId('rich-text')
     await expect(description).toBeVisible()
     await expect(description.locator('script')).toHaveCount(0)
+    await expect(description.locator('[onerror]')).toHaveCount(0)
     expect(await page.evaluate(() => 'pwned' in window)).toBe(false)
 
     /* Add to cart: the toast confirms, the header count updates. */

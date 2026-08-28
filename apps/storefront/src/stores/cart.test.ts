@@ -90,6 +90,33 @@ describe('restore', () => {
     expect(localStorage.getItem(CART_ID_STORAGE_KEY)).toBe('gid://shopify/Cart/abc')
     expect(store.error?.kind).toBe('network')
   })
+
+  it('discards a restore that resolves after a newer mutation has already written state', async () => {
+    /* Same shape as `useCollection`'s "discards a superseded collection load"
+       test (`packages/sdk-commerce/src/vue/queries.test.ts`): a manually
+       controlled resolver lets the slower, EARLIER call resolve LAST, proving
+       the generation guard — not call order — decides which write wins. */
+    const resolvers: ((value: StorefrontResult<Cart | null>) => void)[] = []
+    const getCart = vi.fn(
+      () => new Promise<StorefrontResult<Cart | null>>((resolve) => resolvers.push(resolve)),
+    )
+    stubClient({ getCart: getCart as never })
+    localStorage.setItem(CART_ID_STORAGE_KEY, 'gid://shopify/Cart/abc')
+    const store = useCartStore()
+
+    const restorePromise = store.restore()
+    /* A newer, faster mutation completes and adopts its own cart before
+       restore resolves. */
+    await store.addLine('gid://shopify/ProductVariant/2-0')
+    const cartAfterAdd = store.cart
+
+    /* The stale restore() now resolves — it must NOT overwrite the newer
+       state. */
+    resolvers[0]?.(ok(cart()))
+    await restorePromise
+
+    expect(store.cart).toBe(cartAfterAdd)
+  })
 })
 
 describe('addLine', () => {

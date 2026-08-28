@@ -125,6 +125,8 @@ async function addToCart(): Promise<void> {
     <div v-else class="aspect-square w-full rounded-lg bg-neutral-100" aria-hidden="true" />
 
     <div class="flex flex-col gap-4">
+      <p v-if="error && copy" role="alert" class="text-sm text-danger-700">{{ copy.detail }}</p>
+
       <h1 class="text-2xl font-semibold text-neutral-900">{{ product.title }}</h1>
 
       <p class="text-lg font-medium text-neutral-900">

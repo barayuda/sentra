@@ -121,8 +121,8 @@ The boundary that prevents that:
   `SANITIZE_ALLOWED_TAGS` and `SANITIZE_ALLOWED_ATTR` enumerate exactly what a product
   description legitimately needs; `style` is deliberately excluded, since a merchant-
   supplied `style` can position an element over the page as a clickjacking surface.
-- **A hardening pass** beyond DOMPurify's own allowlists: `target="_blank"` links get
-  `rel="noopener noreferrer"` against reverse tabnabbing, and `data:` image sources are
+- **A hardening pass** beyond DOMPurify's own allowlists: links carrying a `target` attribute
+  get `rel="noopener noreferrer"` against reverse tabnabbing, and `data:` image sources are
   stripped, since DOMPurify's default `DATA_URI_TAGS` permits `data:` on `img` even though
   it blocks `javascript:` on `href`.
 - **A DOM is required, and not every DOM proves it works.** `DOMPurify.isSupported` is not

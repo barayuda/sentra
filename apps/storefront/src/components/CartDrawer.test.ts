@@ -181,4 +181,21 @@ describe('CartDrawer', () => {
     expect(await findByText(/check your connection/i)).toBeTruthy()
     expect(await findByText('Stoneware Mug No. 1')).toBeTruthy()
   })
+
+  it('shows a failure alert even when the cart is empty (a failed restore)', async () => {
+    /*
+     * A failed `restore()` sets `cart.error` while leaving `cart.cart` null,
+     * so `cart.isEmpty` is true — this is the exact case the fix in this file
+     * targets: the alert must render alongside the empty-cart state, not be
+     * hidden by it.
+     */
+    const { findByTestId, findByText } = await renderDrawer({
+      getCart: vi.fn(async () => ({
+        ok: false as const,
+        error: { kind: 'network' as const, message: 'down', attempts: 3, status: null },
+      })),
+    } as Partial<StorefrontClient>)
+    expect(await findByTestId('cart-empty')).toBeTruthy()
+    expect(await findByText(/check your connection/i)).toBeTruthy()
+  })
 })

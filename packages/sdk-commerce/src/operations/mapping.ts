@@ -77,7 +77,7 @@ export function mapMoney(wire: WireMoney | null | undefined, path: string): Mone
   const money = required(wire, path)
   return {
     amount: requiredString(money.amount, `${path}.amount`),
-    currencyCode: required(money.currencyCode, `${path}.currencyCode`) as CurrencyCode,
+    currencyCode: requiredString(money.currencyCode, `${path}.currencyCode`) as CurrencyCode,
   }
 }
 

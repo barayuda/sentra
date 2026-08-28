@@ -108,7 +108,6 @@ watch(
     ref="scroller"
     role="list"
     aria-label="Products"
-    :aria-setsize="products.length"
     class="overflow-auto"
     :style="{ height: `${heightPx}px` }"
   >
@@ -125,9 +124,11 @@ watch(
         }"
       >
         <div
-          v-for="product in rows[virtualRow.index]"
+          v-for="(product, columnIndex) in rows[virtualRow.index]"
           :key="product.id"
           role="listitem"
+          :aria-setsize="products.length"
+          :aria-posinset="virtualRow.index * columns + columnIndex + 1"
           class="h-full"
         >
           <ProductCard

@@ -55,6 +55,15 @@ export const useCartStore = defineStore('cart', () => {
   /** Count, not a flag — see the concurrency test. */
   const pending = ref(0)
 
+  /**
+   * Invalidates a superseded mutation's write. Two overlapping calls resolve
+   * in network order, not call order — without this, a `restore()` that
+   * started first but resolves last could overwrite state a later `addLine()`
+   * already wrote, silently discarding the user's action. The same technique
+   * `useCollection` (`@sentra/sdk-commerce/vue`) uses for the identical shape.
+   */
+  let generation = 0
+
   const loading = computed(() => pending.value > 0)
   const itemCount = computed(() => cart.value?.totalQuantity ?? 0)
   const lines = computed<readonly CartLine[]>(() => cart.value?.lines ?? [])
@@ -75,9 +84,11 @@ export const useCartStore = defineStore('cart', () => {
    * @returns The value on success, or null on failure.
    */
   async function run<T>(operation: () => Promise<StorefrontResult<T>>): Promise<T | null> {
+    const current = (generation += 1)
     pending.value += 1
     try {
       const result = await operation()
+      if (current !== generation) return null
       if (!result.ok) {
         error.value = result.error
         return null
@@ -109,9 +120,11 @@ export const useCartStore = defineStore('cart', () => {
   async function restore(): Promise<void> {
     const cartId = readStoredCartId()
     if (!cartId) return
+    const current = (generation += 1)
     pending.value += 1
     try {
       const result = await getStorefrontClient().getCart({ cartId })
+      if (current !== generation) return
       if (!result.ok) {
         error.value = result.error
         return

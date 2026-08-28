@@ -27,12 +27,32 @@ describe('ProductGrid', () => {
     expect(getByRole('list').getAttribute('aria-label')).toBe('Products')
   })
 
-  it('advertises the full product count even though it renders a window', () => {
-    /* Virtualisation hides most rows from the DOM. Without an explicit count a
-       screen-reader user is told the collection has however many items happen
-       to be on screen. */
-    const { getByRole } = render(ProductGrid, { props: { products: PRODUCTS } })
-    expect(getByRole('list').getAttribute('aria-setsize')).toBe('24')
+  it('advertises the full product count on each item, even though it renders a window', () => {
+    /*
+     * Virtualisation hides most rows from the DOM. Without an explicit count a
+     * screen-reader user is told the collection has however many items happen
+     * to be on screen. Per the ARIA spec, `aria-setsize` belongs on set
+     * MEMBERS (`role="listitem"`) — on the `role="list"` container it is
+     * inert, so this asserts it on the rendered items rather than the list.
+     */
+    const { getAllByTestId } = render(ProductGrid, { props: { products: PRODUCTS } })
+    const cards = getAllByTestId('product-card')
+    expect(cards.length).toBeGreaterThan(0)
+    for (const card of cards) {
+      expect(card.closest('[role="listitem"]')?.getAttribute('aria-setsize')).toBe('24')
+    }
+  })
+
+  it('gives each item its 1-based position among the full product list', () => {
+    const { getAllByTestId } = render(ProductGrid, {
+      props: { products: PRODUCTS, heightPx: 2000, rowHeightPx: 100 },
+    })
+    const items = getAllByTestId('product-card').map((card) => card.closest('[role="listitem"]'))
+    /* The third product (index 2) sits in the grid's third position overall. */
+    expect(items[2]?.getAttribute('aria-posinset')).toBe('3')
+    for (const item of items) {
+      expect(item?.getAttribute('aria-setsize')).toBe('24')
+    }
   })
 
   it('renders fewer cards than products, proving virtualisation is active', () => {
@@ -67,7 +87,7 @@ describe('ProductGrid', () => {
   it('renders nothing but stays valid for an empty product list', () => {
     const { getByRole, queryAllByTestId } = render(ProductGrid, { props: { products: [] } })
     expect(queryAllByTestId('product-card')).toHaveLength(0)
-    expect(getByRole('list').getAttribute('aria-setsize')).toBe('0')
+    expect(getByRole('list')).toBeTruthy()
   })
 
   it('emits endReached when the last row comes into view', async () => {

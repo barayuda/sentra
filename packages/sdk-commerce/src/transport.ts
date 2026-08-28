@@ -161,6 +161,7 @@ export function createStorefrontTransport(
       const timer = setTimeout(() => controller.abort(), timeoutMs)
 
       let response: Response
+      let rawBody: string
       try {
         response = await fetchImpl(endpoint, {
           method: 'POST',
@@ -172,6 +173,11 @@ export function createStorefrontTransport(
           body: JSON.stringify({ query: document, variables }),
           signal: controller.signal,
         })
+        /* The abort timer stays armed through the body read too, not only
+           until headers arrive — a server that sends headers and then stalls
+           mid-body would otherwise defeat `timeoutMs` entirely, since clearing
+           the timer as soon as `fetch` resolves only bounds time-to-first-byte. */
+        rawBody = await response.text()
       } catch (cause) {
         const aborted = cause instanceof Error && cause.name === 'AbortError'
         const message = aborted
@@ -191,7 +197,6 @@ export function createStorefrontTransport(
 
       /* Throttling can arrive as a status code with no usable body, so read the
          body defensively before deciding. */
-      const rawBody = await response.text()
       let body: GraphQLBody<TData> | null = null
       try {
         body = rawBody === '' ? null : (JSON.parse(rawBody) as GraphQLBody<TData>)

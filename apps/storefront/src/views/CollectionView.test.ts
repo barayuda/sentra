@@ -90,4 +90,37 @@ describe('CollectionView', () => {
     await findByTestId('state-error')
     expect(queryByRole('button', { name: /try again/i })).toBeNull()
   })
+
+  it('shows an inline failure without losing the products already on screen', async () => {
+    const getCollection = vi
+      .fn<StorefrontClient['getCollection']>()
+      .mockResolvedValueOnce({ ok: true, value: page(6, true) })
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { kind: 'network', message: 'down', attempts: 3, status: null },
+      })
+
+    const { findByText, findByRole, getByRole, queryByTestId } = renderView(getCollection)
+    await findByText('Tableware')
+    /* ProductGrid's `endReached` watch fires `{ immediate: true }`, so once the
+       first page's rows are all within the rendered window (true for a 6-item
+       page here), CollectionView's `onEndReached` calls `loadMore()` on its
+       own — no explicit scroll/user trigger needed to reach the second,
+       failing `getCollection` call. */
+    const alert = await findByRole('alert')
+    expect(alert.textContent).toMatch(/down|network|connection/i)
+    expect(getCollection).toHaveBeenCalledTimes(2)
+    /* Products stay rendered — this is what proves the INLINE (not blocking)
+       branch is active: `blockingError` only takes over when the grid has
+       zero products, which would replace `role="list"` with a `state-error`
+       StateBlock entirely instead of leaving it mounted alongside the alert.
+       (Individual product-card text isn't asserted here: @tanstack/vue-virtual
+       doesn't recompute its visible row window under happy-dom when the
+       `products` count changes after mount, so the cards don't render in this
+       test environment even though the list container does — see
+       `ProductGrid.test.ts` for coverage of actual card rendering.) */
+    expect(getByRole('list')).toBeTruthy()
+    expect(queryByTestId('state-error')).toBeNull()
+    expect(await findByText('Tableware')).toBeTruthy()
+  })
 })

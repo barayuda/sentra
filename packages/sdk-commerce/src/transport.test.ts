@@ -113,6 +113,39 @@ describe('createStorefrontTransport', () => {
     expect(error.message).toContain('timed out after 5ms')
   })
 
+  it('bounds the response body read by the same timeout, not just time-to-first-byte', async () => {
+    /*
+     * A hand-rolled `ReadableStream`-backed `Response` does not reliably
+     * reject `.text()` on abort under Node's undici-backed `fetch`/`Response`
+     * in this Vitest environment, so this fakes the object `fetchImpl`
+     * resolves with directly: headers "arrive" immediately (the outer
+     * `await fetchImpl(...)` resolves), but `.text()` only settles when the
+     * timeout's `AbortSignal` fires — exactly the stalled-body scenario the
+     * fix guards against. This exercises the real code path added in
+     * `transport.ts` (the merged try block), not just unrelated behaviour:
+     * without the fix, the timer is cleared before `.text()` is ever
+     * awaited, so this fake `.text()` would hang forever and the test would
+     * time out instead of resolving to a network error.
+     */
+    const fetchImpl = (async (_url: string, init: RequestInit) =>
+      ({
+        status: 200,
+        ok: true,
+        text: () =>
+          new Promise<string>((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => {
+              reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+            })
+          }),
+      }) as unknown as Response) as unknown as typeof fetch
+    const transport = transportWith(fetchImpl, { timeoutMs: 5, maxAttempts: 1 })
+
+    const result = await transport.request(DOCUMENT)
+    const error = expectFailure(result)
+    expect(error).toMatchObject({ kind: 'network' })
+    expect(error.message).toContain('timed out after 5ms')
+  })
+
   it('retries a transport failure up to maxAttempts and reports the count', async () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error('ECONNRESET')

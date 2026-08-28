@@ -51,14 +51,25 @@ async function remove(lineId: string, quantity: number): Promise<void> {
     title="Your cart"
     @update:model-value="emit('update:modelValue', $event)"
   >
+    <!--
+      This alert sits above the empty/non-empty pair rather than inside the
+      non-empty branch: a failed `restore()` sets `error` while leaving
+      `cart` null, so `cart.isEmpty` is true — nesting the alert inside
+      `v-else` would silently hide exactly the failure this store exists to
+      distinguish from a genuinely empty cart.
+    -->
+    <p v-if="failure" role="alert" class="text-sm text-danger-700">{{ failure.detail }}</p>
+
     <div v-if="cart.isEmpty" data-testid="cart-empty" class="py-6 text-center">
       <p class="text-sm font-medium text-neutral-900">Your cart is empty</p>
       <p class="mt-1 text-sm text-neutral-500">Add something from the collection to get started.</p>
     </div>
 
     <div v-else class="flex flex-col gap-4">
-      <p v-if="failure" role="alert" class="text-sm text-danger-700">{{ failure.detail }}</p>
-
+      <!-- If this ever becomes a per-line disable instead of the global
+           `cart.loading`, the store's generation guard (added for the exact
+           same superseded-write race) is what keeps concurrent mutations safe —
+           don't remove one without the other. -->
       <ul class="flex flex-col gap-4">
         <li v-for="line in cart.lines" :key="line.id" class="flex gap-3">
           <img

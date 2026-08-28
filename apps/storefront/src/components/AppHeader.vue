@@ -30,8 +30,12 @@ const emit = defineEmits<{
       </RouterLink>
       <Button variant="secondary" @click="emit('openCart')">
         Cart
-        <span v-if="itemCount > 0" class="ml-1 font-semibold">({{ itemCount }})</span>
-        <span class="sr-only">{{ itemCount }} items in cart</span>
+        <span v-if="itemCount > 0" class="ml-1 font-semibold" aria-hidden="true">
+          ({{ itemCount }})
+        </span>
+        <span class="sr-only">
+          {{ itemCount === 0 ? 'empty' : `${itemCount} item${itemCount === 1 ? '' : 's'}` }}
+        </span>
       </Button>
     </div>
   </header>

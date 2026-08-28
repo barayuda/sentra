@@ -175,4 +175,41 @@ describe('ProductView', () => {
     const { findByLabelText } = renderView(async () => ({ ok: true, value: multi }))
     expect(await findByLabelText('Variant')).toBeTruthy()
   })
+
+  it('shows an inline failure alert without hiding the already-loaded product', async () => {
+    /*
+     * `useProduct` re-fetches when its `handle` source changes (`watch: () =>
+     * toValue(handle)` in `useStorefrontQuery`). There is no in-app
+     * product-to-product navigation today (parked for M4), so a prop rerender
+     * is the only way to reach a second `getProduct` call from this test —
+     * matching how `useStorefrontQuery` itself is actually driven.
+     */
+    const getProduct = vi
+      .fn<StorefrontClient['getProduct']>()
+      .mockResolvedValueOnce({ ok: true, value: PRODUCT })
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { kind: 'network', message: 'down', attempts: 3, status: null },
+      })
+    setStorefrontClient({ getProduct } as unknown as StorefrontClient)
+    const { findByText, findByRole, rerender } = render(ProductView, {
+      props: { handle: 'sentra-piece-1' },
+      global: {
+        provide: {
+          [STOREFRONT_INJECTION_KEY as unknown as string]: { getProduct },
+          [ANALYTICS_INJECTION_KEY as unknown as string]: recordingAnalytics(),
+          [TOAST_INJECTION_KEY as unknown as string]: createToastService(),
+        },
+        stubs: { RouterLink: { template: '<a><slot /></a>' } },
+      },
+    })
+    await findByText('Stoneware Mug No. 1')
+
+    await rerender({ handle: 'sentra-piece-2' })
+
+    const alert = await findByRole('alert')
+    expect(alert.textContent).toMatch(/check your connection/i)
+    // The previously loaded product's title stays visible — the failure is inline, not blocking.
+    expect(await findByText('Stoneware Mug No. 1')).toBeTruthy()
+  })
 })
