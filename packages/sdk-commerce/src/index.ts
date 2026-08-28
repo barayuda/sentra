@@ -57,3 +57,5 @@ export {
   type CartLineUpdate,
 } from './operations/cart.ts'
 export { SchemaViolation } from './operations/assert.ts'
+export { sanitizeProductHtml, SANITIZE_ALLOWED_TAGS, SANITIZE_ALLOWED_ATTR } from './sanitize.ts'
+export { shopifyImageUrl, shopifyImageSrcset, type ShopifyImageTransform } from './images.ts'
