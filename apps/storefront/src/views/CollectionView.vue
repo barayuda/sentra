@@ -18,22 +18,7 @@ import { DEFAULT_COLLECTION_HANDLE } from '../router.ts'
  * inline message under the grid.
  */
 const router = useRouter()
-
-/**
- * `useAnalytics()` throws when `analyticsPlugin` was never installed on the
- * app. Production always installs it (see `main.ts`), but a unit test that
- * mounts this view in isolation to exercise loading/empty/error states has no
- * reason to also wire up analytics — and a telemetry call must never be able
- * to crash the page it is reporting on. The try/catch keeps `useAnalytics()`
- * as the sanctioned way to get the client while degrading to a no-op instead
- * of an unhandled exception when it is absent.
- */
-let analytics: ReturnType<typeof useAnalytics> | null
-try {
-  analytics = useAnalytics()
-} catch {
-  analytics = null
-}
+const analytics = useAnalytics()
 
 const { products, title, loading, error, hasNextPage, loadMore, reset } = useCollection(
   DEFAULT_COLLECTION_HANDLE,
@@ -49,7 +34,7 @@ const copy = computed(() => (error.value ? errorCopy(error.value) : null))
 
 /** Reports failures by taxonomy kind — never by message; see analytics.ts. */
 watch(error, (next) => {
-  if (next) analytics?.track('storefront_error', { kind: next.kind, operation: 'getCollection' })
+  if (next) analytics.track('storefront_error', { kind: next.kind, operation: 'getCollection' })
 })
 
 function openProduct(handle: string): void {

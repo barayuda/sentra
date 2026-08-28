@@ -1,8 +1,15 @@
 import type { CollectionPage, StorefrontClient, StorefrontResult } from '@sentra/sdk-commerce'
 import { STOREFRONT_INJECTION_KEY } from '@sentra/sdk-commerce/vue'
+import { ANALYTICS_INJECTION_KEY, type AnalyticsClient } from '@sentra/plugin-analytics'
 import { render } from '@testing-library/vue'
 import { describe, expect, it, vi } from 'vitest'
 import CollectionView from './CollectionView.vue'
+
+/** Records tracked events without a real transport. */
+function recordingAnalytics(): AnalyticsClient & { calls: [string, unknown][] } {
+  const calls: [string, unknown][] = []
+  return { calls, track: (name, props) => calls.push([name, props]), flush: () => {} }
+}
 
 function page(count: number, hasNextPage: boolean): CollectionPage {
   return {
@@ -25,7 +32,10 @@ function page(count: number, hasNextPage: boolean): CollectionPage {
 function renderView(getCollection: StorefrontClient['getCollection']) {
   return render(CollectionView, {
     global: {
-      provide: { [STOREFRONT_INJECTION_KEY as unknown as string]: { getCollection } },
+      provide: {
+        [STOREFRONT_INJECTION_KEY as unknown as string]: { getCollection },
+        [ANALYTICS_INJECTION_KEY as unknown as string]: recordingAnalytics(),
+      },
       stubs: { RouterLink: { template: '<a><slot /></a>' } },
     },
   })
