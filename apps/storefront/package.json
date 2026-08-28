@@ -34,6 +34,7 @@
     "@vitest/coverage-v8": "4.1.11",
     "@vue/test-utils": "2.4.11",
     "happy-dom": "20.11.8",
+    "jsdom": "30.0.1",
     "msw": "2.15.0",
     "tailwindcss": "4.3.3",
     "typescript": "npm:@typescript/typescript6@6.0.2",

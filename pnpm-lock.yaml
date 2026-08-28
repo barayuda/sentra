@@ -98,6 +98,9 @@ importers:
       happy-dom:
         specifier: 20.11.8
         version: 20.11.8
+      jsdom:
+        specifier: 30.0.1
+        version: 30.0.1
       msw:
         specifier: 2.15.0
         version: 2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2)
