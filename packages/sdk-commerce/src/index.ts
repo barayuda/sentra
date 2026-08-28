@@ -33,3 +33,9 @@ export {
   type SafeHtml,
   type UnsafeHtml,
 } from './types.ts'
+export {
+  createStorefrontTransport,
+  retryDelayMs,
+  type StorefrontTransport,
+  type StorefrontTransportOptions,
+} from './transport.ts'
