@@ -41,12 +41,19 @@ export interface CartLineUpdate {
 /**
  * Narrow view of the `CartFields` fragment.
  *
- * See the ruling in the plan: `merchandise` is a GraphQL union, so the
- * generated type is not usefully accessible here. These are the fields the
- * fragment requests, and `required()`/`requiredString()` verify each one at
- * runtime. `checkoutUrl`, `amount`, and `url` are typed `unknown` rather than
- * `string` because they are Shopify custom scalars (`URL`, `Decimal`) that
- * codegen cannot give a concrete TypeScript shape.
+ * Described structurally rather than imported from the generated `…Mutation`
+ * types, for the same reason as the wire interfaces in `mapping.ts`: each
+ * generated type describes one whole operation's response, so a mapper shared
+ * by six operations cannot be typed against any one of them without picking
+ * arbitrarily. Codegen already proved these fields exist by validating the
+ * documents against the vendored schema, so this narrows rather than
+ * re-declares.
+ *
+ * Typed as a parameter rather than taken as `unknown` and cast: a cast would
+ * discard the compile-time drift check this package depends on. If a
+ * regenerated schema changes a field's shape, the call sites below fail to
+ * typecheck — which is exactly the signal we want, and the whole reason
+ * `SchemaError` is a runtime last resort rather than a first line of defence.
  */
 interface WireCart {
   readonly id?: string | null
@@ -113,8 +120,8 @@ function mapCartLine(
  * @param path - JSON path for error reporting.
  * @throws SchemaViolation when a required field is absent.
  */
-function mapCart(wire: unknown, path: string): Cart {
-  const cart = required(wire, path) as WireCart
+function mapCart(wire: WireCart | null | undefined, path: string): Cart {
+  const cart = required(wire, path)
   const edges = required(cart.lines?.edges, `${path}.lines.edges`)
   return {
     id: required(cart.id, `${path}.id`),
@@ -157,7 +164,7 @@ class CartRejected extends Error {
 
 /** Shape shared by every cart mutation's payload. */
 interface MutationPayload {
-  readonly cart?: unknown
+  readonly cart?: WireCart | null
   readonly userErrors?:
     | readonly {
         readonly field?: readonly string[] | null
