@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./mocks": "./src/mocks/browser.ts",
+    "./federated": "./src/federated/index.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -16,6 +20,7 @@
   "dependencies": {
     "@sentra/plugin-analytics": "workspace:*",
     "@sentra/sdk-commerce": "workspace:*",
+    "@sentra/shell-contract": "workspace:*",
     "@sentra/tokens": "workspace:*",
     "@sentra/ui": "workspace:*",
     "@tanstack/vue-virtual": "3.13.36",
@@ -26,6 +31,7 @@
     "vue-router": "5.3.0"
   },
   "devDependencies": {
+    "@module-federation/vite": "1.20.9",
     "@playwright/test": "1.62.1",
     "@sentra/config": "workspace:*",
     "@tailwindcss/vite": "4.3.3",

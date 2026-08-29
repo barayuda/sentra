@@ -4,51 +4,77 @@ import {
   instrumentRouter,
   useAnalytics,
 } from '@sentra/plugin-analytics'
-import { storefrontPlugin } from '@sentra/sdk-commerce/vue'
-import { toastPlugin } from '@sentra/ui'
+import { createShellBus, shellBusPlugin } from '@sentra/shell-contract'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
+import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import { createStorefrontAnalyticsTransport, storefrontEventSchema } from './analytics.ts'
-import { router } from './router.ts'
-import { getStorefrontClient, mocksEnabled } from './storefront.ts'
-import './styles.css'
+import storefrontRemote from './federated/index.ts'
+import { mocksEnabled } from './storefront.ts'
 
 /**
- * Boots the application.
+ * Boots the storefront on its own.
  *
- * The mock worker starts and settles *before* `createApp`, because a component
+ * Everything here is the host-shaped scaffolding the shell would otherwise
+ * supply: a router, a Pinia, a bus, an analytics client. What it deliberately
+ * does *not* do is define a second set of routes or a second `register` — it
+ * drives `federated/index.ts`, the same module the shell loads. A regression
+ * in the federated entry therefore fails the storefront's own E2E suite,
+ * which is the point of dual-mode.
+ *
+ * The mock worker starts and settles before `createApp`, because a component
  * that issues a request before the Service Worker is intercepting reaches the
- * real network — a race that only shows up on slow machines and in CI.
- *
- * The dynamic import matters too: a production build with mocks disabled never
- * evaluates the module, so MSW and the fixtures are tree-shaken out of the
- * bundle rather than shipped as dead weight.
+ * real network — a race that only shows up on slow machines and in CI. The
+ * dynamic import keeps MSW and the fixtures out of a production bundle.
  */
+/**
+ * vue-router rejects a relative `path` on a top-level route record — only
+ * `children` may omit the leading slash. `storefrontRemote.routes` are
+ * deliberately relative (spec §3.1: a leading slash would force the
+ * storefront to the site root regardless of where a host mounts it), so
+ * standalone mode has to perform the same join any shell would when mounting
+ * a remote at its `basePath`. Standalone mounts at the root, hence `''`.
+ */
+function toAbsolutePath(basePath: string, path: string): string {
+  const joined = `${basePath}/${path}`
+  return joined.startsWith('/') ? joined : `/${joined}`
+}
+
 async function bootstrap(): Promise<void> {
   if (mocksEnabled()) {
     const { startMockWorker } = await import('./mocks/browser.ts')
     await startMockWorker()
   }
 
+  const router = createRouter({
+    history: createWebHistory(),
+    routes: storefrontRemote.routes.map((route) => ({
+      ...route,
+      path: toAbsolutePath('', route.path),
+    })),
+    scrollBehavior: () => ({ top: 0 }),
+  })
+
   const app = createApp(App)
+  const bus = createShellBus()
 
   app.use(createPinia())
   app.use(router)
-  app.use(toastPlugin)
+  app.use(shellBusPlugin, bus)
   app.use(analyticsPlugin, {
     schema: storefrontEventSchema,
     transport: createStorefrontAnalyticsTransport(),
   })
-  app.use(storefrontPlugin, { client: getStorefrontClient() })
+  storefrontRemote.register(app, { bus, basePath: '' })
 
   /**
    * `analyticsPlugin` owns its client, so retrieving it outside a component
    * means running `useAnalytics()` inside the app's injection context.
    * `app.runWithContext` exists for exactly this: it is the sanctioned way to
-   * use an injection outside `setup()`, and it avoids the alternative of
-   * constructing a second client that would batch and flush independently of
-   * the one every component sees.
+   * use an injection outside `setup()`, and it avoids constructing a second
+   * client that would batch and flush independently of the one every
+   * component sees.
    */
   const analytics = app.runWithContext(() => useAnalytics())
   instrumentRouter(router, analytics)

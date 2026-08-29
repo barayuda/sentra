@@ -6,8 +6,8 @@ import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductGrid from '../components/ProductGrid.vue'
 import StateBlock from '../components/StateBlock.vue'
+import { DEFAULT_COLLECTION_HANDLE } from '../federated/routes.ts'
 import { errorCopy } from '../lib/errorCopy.ts'
-import { DEFAULT_COLLECTION_HANDLE } from '../router.ts'
 
 /**
  * Collection listing.
