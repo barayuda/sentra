@@ -89,4 +89,13 @@ describe('DataTable', () => {
     render(DataTable, { props: { columns, rows: [] } })
     expect(screen.queryByRole('button', { name: /sort by price/i })).toBeNull()
   })
+
+  it('labels the table and its scrollable region for assistive technology', () => {
+    const { getByRole } = render(DataTable, {
+      props: { columns, rows: manyRows.slice(0, 3), label: 'Orders' },
+    })
+    expect(getByRole('table').getAttribute('aria-label')).toBe('Orders')
+    const scroller = getByRole('table').querySelector('[tabindex="0"]')
+    expect(scroller?.getAttribute('aria-label')).toBe('Orders rows, scrollable')
+  })
 })

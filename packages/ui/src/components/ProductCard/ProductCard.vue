@@ -25,6 +25,8 @@ withDefaults(
     price: { amount: number | string; currency: string }
     /** Product image URL; the card reserves the space either way. */
     imageSrc?: string
+    /** Responsive candidates for the image; pairs with imageSrc as the fallback. */
+    imageSrcset?: string
     /** Image alt text — required for a meaningful image (a11y). */
     imageAlt?: string
     /** Short callout rendered over the image, e.g. `'New'`, `'Sale'`. */
@@ -32,7 +34,7 @@ withDefaults(
     /** Skeleton state: hides content and marks the card busy. */
     loading?: boolean
   }>(),
-  { imageSrc: undefined, imageAlt: '', badge: undefined, loading: false },
+  { imageSrc: undefined, imageSrcset: undefined, imageAlt: '', badge: undefined, loading: false },
 )
 
 const emit = defineEmits<{
@@ -59,6 +61,8 @@ const emit = defineEmits<{
         <img
           v-if="imageSrc"
           :src="imageSrc"
+          :srcset="imageSrcset"
+          sizes="(min-width: 768px) 33vw, 100vw"
           :alt="imageAlt"
           class="h-40 w-full object-cover"
           loading="lazy"

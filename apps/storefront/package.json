@@ -1,0 +1,45 @@
+{
+  "name": "@sentra/storefront",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "vue-tsc --noEmit",
+    "e2e": "playwright test",
+    "init-msw": "msw init public --no-save"
+  },
+  "dependencies": {
+    "@sentra/plugin-analytics": "workspace:*",
+    "@sentra/sdk-commerce": "workspace:*",
+    "@sentra/tokens": "workspace:*",
+    "@sentra/ui": "workspace:*",
+    "@tanstack/vue-virtual": "3.13.36",
+    "@vue/devtools-api": "8.2.1",
+    "@vueuse/core": "14.4.0",
+    "pinia": "4.0.3",
+    "vue": "3.5.42",
+    "vue-router": "5.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@sentra/config": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/vue": "8.1.0",
+    "@vitejs/plugin-vue": "6.0.8",
+    "@vitest/coverage-v8": "4.1.11",
+    "@vue/test-utils": "2.4.11",
+    "happy-dom": "20.11.8",
+    "jsdom": "30.0.1",
+    "msw": "2.15.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vite": "8.2.2",
+    "vitest": "4.1.11",
+    "vue-tsc": "3.3.11"
+  }
+}

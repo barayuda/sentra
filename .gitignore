@@ -49,3 +49,6 @@ spike/**/dist/
 
 # planning docs — local only, never committed
 docs/superpowers/
+
+# agent execution scratch (ledgers, task briefs, review packages) — local only
+.superpowers/

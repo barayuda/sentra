@@ -96,11 +96,22 @@ watch(
 function onOverlayClick(): void {
   emit('update:modelValue', false)
 }
+
+/**
+ * Stacking comes from `@sentra/tokens` (`--z-index-overlay` 1200 <
+ * `--z-index-modal` 1300 < `--z-index-toast` 1400), not from Tailwind's
+ * numeric scale. The ordering is deliberate: a toast raised while a modal is
+ * open must remain visible, because a toast is frequently the *result* of an
+ * action taken inside the modal.
+ */
 </script>
 
 <template>
   <Teleport v-if="isMounted" to="body">
-    <div v-if="modelValue" class="fixed inset-0 z-40 flex items-center justify-center p-4">
+    <div
+      v-if="modelValue"
+      class="fixed inset-0 z-[var(--z-index-overlay)] flex items-center justify-center p-4"
+    >
       <div
         data-testid="dialog-overlay"
         class="absolute inset-0 bg-neutral-900/50"
@@ -113,7 +124,7 @@ function onOverlayClick(): void {
         :aria-labelledby="titleId"
         :aria-describedby="describedBy"
         tabindex="-1"
-        class="relative z-50 w-full max-w-md rounded-lg bg-neutral-50 p-6 shadow-lg"
+        class="relative z-[var(--z-index-modal)] w-full max-w-md rounded-lg bg-neutral-50 p-6 shadow-lg"
       >
         <h2 :id="titleId" class="text-lg font-semibold text-neutral-900">{{ title }}</h2>
         <p v-if="description" :id="descriptionId" class="mt-1 text-sm text-neutral-500">

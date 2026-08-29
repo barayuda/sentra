@@ -16,7 +16,9 @@ const VARIANT_CLASSES: Record<string, string> = {
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-end gap-2 p-4">
+  <div
+    class="pointer-events-none fixed inset-x-0 bottom-0 z-[var(--z-index-toast)] flex flex-col items-end gap-2 p-4"
+  >
     <div
       v-for="toast in service.toasts.value"
       :key="toast.id"

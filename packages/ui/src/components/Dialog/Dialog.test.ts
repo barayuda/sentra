@@ -88,4 +88,12 @@ describe('Dialog', () => {
     // reward) an unconditional override of a real tabbable target.
     expect(dialog.contains(document.activeElement)).toBe(true)
   })
+
+  it('layers the overlay and panel from z-index tokens rather than literals', async () => {
+    render(Dialog, { props: { modelValue: true, title: 'Layered' } })
+    await nextTick()
+    const panel = screen.getByRole('dialog')
+    expect(panel.className).toContain('z-[var(--z-index-modal)]')
+    expect(panel.parentElement?.className).toContain('z-[var(--z-index-overlay)]')
+  })
 })

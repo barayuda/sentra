@@ -138,4 +138,14 @@ describe('Combobox', () => {
     await fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowDown' })
     expect(screen.getByRole('combobox').getAttribute('aria-expanded')).toBe('false')
   })
+
+  it('opens on ArrowUp from closed and activates the last option', async () => {
+    const { getByRole } = render(Combobox, { props: { label: 'Country', options } })
+    const input = getByRole('combobox')
+    await fireEvent.keyDown(input, { key: 'ArrowUp' })
+    expect(input.getAttribute('aria-expanded')).toBe('true')
+    const items = getByRole('listbox').querySelectorAll('[role="option"]')
+    const last = items[items.length - 1]
+    expect(input.getAttribute('aria-activedescendant')).toBe(last?.id)
+  })
 })

@@ -40,6 +40,12 @@ const props = withDefaults(
     sortKey?: string
     /** Current sort direction (controlled). */
     sortDirection?: 'asc' | 'desc'
+    /**
+     * Accessible name for the table and its scrollable region. The scroll
+     * viewport is focusable (WCAG 2.1.1 for keyboard scrolling), and a
+     * focusable region with no name is announced as an unlabelled group.
+     */
+    label?: string
   }>(),
   {
     rowHeightPx: 44,
@@ -47,6 +53,7 @@ const props = withDefaults(
     loading: false,
     sortKey: undefined,
     sortDirection: undefined,
+    label: 'Data table',
   },
 )
 
@@ -90,6 +97,7 @@ function cellValue(row: Row, column: ColumnDef<Row>): unknown {
 <template>
   <div
     role="table"
+    :aria-label="label"
     :aria-rowcount="rows.length + 1"
     :aria-busy="loading || undefined"
     class="overflow-hidden rounded-lg border border-neutral-300"
@@ -128,6 +136,7 @@ function cellValue(row: Row, column: ColumnDef<Row>): unknown {
       ref="scroller"
       role="rowgroup"
       tabindex="0"
+      :aria-label="`${label} rows, scrollable`"
       class="overflow-auto"
       :style="{ height: `${heightPx}px` }"
     >
