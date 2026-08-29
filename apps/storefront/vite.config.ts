@@ -11,6 +11,12 @@ export default defineConfig({
       name: 'storefront',
       filename: 'remoteEntry.js',
       exposes: { './remote': './src/federated/index.ts' },
+      /* Off by decision, not by accident — see ADR 0004. Remotes typecheck against
+         @sentra/shell-contract's hand-written RemoteModule, so nothing reads
+         generated federation types, and Task 1's spike measured DTS at ~5.2s of a
+         ~5.5s build. Leaving it on also fails #TYPE-001 here, because this app
+         aliases `typescript` to a package whose bin is `tsc6`. */
+      dts: false,
       shared: {
         vue: { singleton: true, requiredVersion: '3.5.42' },
         /* routerKey is a Symbol — a duplicated copy makes useRouter() return

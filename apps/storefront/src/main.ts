@@ -14,6 +14,19 @@ import storefrontRemote from './federated/index.ts'
 import { mocksEnabled } from './storefront.ts'
 
 /**
+ * vue-router rejects a relative `path` on a top-level route record — only
+ * `children` may omit the leading slash. `storefrontRemote.routes` are
+ * deliberately relative (spec §3.1: a leading slash would force the
+ * storefront to the site root regardless of where a host mounts it), so
+ * standalone mode has to perform the same join any shell would when mounting
+ * a remote at its `basePath`. Standalone mounts at the root, hence `''`.
+ */
+function toAbsolutePath(basePath: string, path: string): string {
+  const joined = `${basePath}/${path}`
+  return joined.startsWith('/') ? joined : `/${joined}`
+}
+
+/**
  * Boots the storefront on its own.
  *
  * Everything here is the host-shaped scaffolding the shell would otherwise
@@ -28,19 +41,6 @@ import { mocksEnabled } from './storefront.ts'
  * real network — a race that only shows up on slow machines and in CI. The
  * dynamic import keeps MSW and the fixtures out of a production bundle.
  */
-/**
- * vue-router rejects a relative `path` on a top-level route record — only
- * `children` may omit the leading slash. `storefrontRemote.routes` are
- * deliberately relative (spec §3.1: a leading slash would force the
- * storefront to the site root regardless of where a host mounts it), so
- * standalone mode has to perform the same join any shell would when mounting
- * a remote at its `basePath`. Standalone mounts at the root, hence `''`.
- */
-function toAbsolutePath(basePath: string, path: string): string {
-  const joined = `${basePath}/${path}`
-  return joined.startsWith('/') ? joined : `/${joined}`
-}
-
 async function bootstrap(): Promise<void> {
   if (mocksEnabled()) {
     const { startMockWorker } = await import('./mocks/browser.ts')
