@@ -1,6 +1,6 @@
 import type { Cart, StorefrontClient } from '@sentra/sdk-commerce'
 import { ANALYTICS_INJECTION_KEY, type AnalyticsClient } from '@sentra/plugin-analytics'
-import { createShellBus, shellBusPlugin } from '@sentra/shell-contract'
+import { createShellBus, type ShellBus, shellBusPlugin } from '@sentra/shell-contract'
 import { toastPlugin } from '@sentra/ui'
 import { DOMWrapper, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -81,6 +81,25 @@ async function seedCart(): Promise<void> {
   await useCartStore().restore()
 }
 
+/**
+ * A real bus whose `on` hands back a spy in place of the real unsubscribe
+ * function, so a test can observe whether the component actually called it —
+ * the real unsubscribe still runs underneath, via `mockImplementation`, so
+ * the bus keeps behaving exactly like `createShellBus()` otherwise.
+ */
+function busWithSpiedUnsubscribe(): { bus: ShellBus; unsubscribe: ReturnType<typeof vi.fn> } {
+  const real = createShellBus()
+  const unsubscribe = vi.fn()
+  const bus: ShellBus = {
+    emit: real.emit,
+    on: (event, handler) => {
+      unsubscribe.mockImplementation(real.on(event, handler))
+      return unsubscribe
+    },
+  }
+  return { bus, unsubscribe }
+}
+
 /*
  * `CartDrawer` renders `Dialog`, which teleports its content to
  * `document.body` (real, unstubbed Teleport) once mounted, so it never
@@ -105,11 +124,37 @@ describe('CartOverlay', () => {
     expect(findDialog().exists()).toBe(true)
   })
 
-  it('stops listening once unmounted', () => {
-    const bus = createShellBus()
+  /*
+   * `ShellBus.emit()` swallows every handler error and never rethrows (see
+   * `bus.ts`), and the handler here (`open.value = true`) cannot throw on an
+   * unmounted component regardless of unsubscription — so "does not throw"
+   * is not a claim this test can lose. These two assertions replace it with
+   * ones that are actually tied to `onBeforeUnmount(stop)` existing: deleting
+   * it must turn both red, which was confirmed by deliberately removing it
+   * and observing the failures before restoring it.
+   */
+  it('invokes the bus unsubscribe function on unmount', () => {
+    const { bus, unsubscribe } = busWithSpiedUnsubscribe()
     const wrapper = mountOverlay(bus)
+    expect(unsubscribe).not.toHaveBeenCalled()
+
     wrapper.unmount()
-    expect(() => bus.emit('cart:open-requested', { origin: 'test' })).not.toThrow()
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1)
+  })
+
+  it('no longer reacts to the bus once unmounted', () => {
+    const bus = createShellBus()
+    const analytics = recordingAnalytics()
+    const wrapper = mountOverlay(bus, analytics)
+
+    bus.emit('cart:open-requested', { origin: 'test' })
+    expect(analytics.calls).toHaveLength(1)
+
+    wrapper.unmount()
+    bus.emit('cart:open-requested', { origin: 'test' })
+
+    expect(analytics.calls).toHaveLength(1)
   })
 
   it('tracks cart_open once with the cart current item count when asked to open', async () => {

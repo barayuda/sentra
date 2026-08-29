@@ -21,6 +21,25 @@ export function registerStorefront(app: App, ctx: RemoteContext): void {
   app.use(storefrontPlugin, { client: getStorefrontClient() })
 
   /**
+   * Loads whatever cart a returning shopper already has, the same load
+   * `App.vue` used to trigger itself in `onMounted` before this moved here.
+   * Registration is the one call site that runs in both modes, so this is
+   * the only place restoration can live without either duplicating it
+   * (standalone) or dropping it entirely (federated, where nothing else
+   * calls it — no route view or overlay does). Symmetric with the
+   * `session:changed` handler below: that one forgets a cart, this one loads
+   * one, and both are store lifecycle rather than a component's concern.
+   *
+   * `app.runWithContext` is required here, not optional: `register` runs
+   * outside any component's `setup()`, and the cart store's own `inject()`
+   * call for the shell bus only resolves its default under a component
+   * instance or a `runWithContext` call — see `stores/cart.ts`.
+   */
+  app.runWithContext(() => {
+    void useCartStore().restore()
+  })
+
+  /**
    * A cart belongs to a session. Signing out and leaving the previous
    * shopper's lines in local storage is both wrong and a small privacy
    * problem, so the remote drops the cart itself rather than hoping the shell
