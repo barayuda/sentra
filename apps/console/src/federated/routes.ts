@@ -7,8 +7,6 @@ import type { RouteRecordRaw } from 'vue-router'
  * A redirect resolves during route matching, before `beforeEach` runs, so an
  * index without the requirement would let an unauthorised visitor observe the
  * redirect target — leaking that `/ops/orders` exists and what it is called.
- *
- * The flags route arrives in Task 9.
  */
 export const consoleRoutes: readonly RouteRecordRaw[] = [
   { path: '', redirect: { name: 'ops-orders' }, meta: { requiresRole: 'ops' } },
@@ -16,6 +14,12 @@ export const consoleRoutes: readonly RouteRecordRaw[] = [
     path: 'orders',
     name: 'ops-orders',
     component: () => import('../views/OrdersView.vue'),
+    meta: { requiresRole: 'ops' },
+  },
+  {
+    path: 'flags',
+    name: 'ops-flags',
+    component: () => import('../views/FlagsView.vue'),
     meta: { requiresRole: 'ops' },
   },
 ]
