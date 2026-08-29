@@ -60,6 +60,25 @@ describe('DataTable', () => {
     expect(screen.getByText('Nothing to show')).toBeTruthy()
   })
 
+  /**
+   * The scroll viewport is `v-show`, not `v-if`/`v-else` — it stays mounted
+   * (merely hidden via `display: none`) even when there are no rows, so the
+   * virtualizer keeps one stable element to measure. `display: none` is
+   * excluded from the accessibility tree by both real browsers and
+   * testing-library's role queries, so `queryByRole('rowgroup')` is the
+   * correct way to pin that exclusion. This deliberately does not assert via
+   * `.focus()`: happy-dom's `.focus()` incorrectly succeeds on a
+   * `display: none` element, so a focus-based assertion would pass
+   * regardless of whether the exclusion actually holds — it would not be
+   * testing the behaviour this test exists to protect. A later change to
+   * `visibility: hidden` (which does NOT leave the accessibility tree, unlike
+   * `display: none`) or a dropped guard would fail this test.
+   */
+  it('excludes the scroll viewport from the accessibility tree when there are no rows', () => {
+    render(DataTable, { props: { columns, rows: [] } })
+    expect(screen.queryByRole('rowgroup')).toBeNull()
+  })
+
   it('marks the table busy while loading', () => {
     render(DataTable, { props: { columns, rows: [], loading: true } })
     expect(screen.getByRole('table').getAttribute('aria-busy')).toBe('true')
