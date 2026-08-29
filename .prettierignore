@@ -8,6 +8,9 @@ docs/
 # SDD controller scratch — gitignored, never formatted
 .superpowers/
 
+# Playwright MCP page snapshots — tool output, gitignored, never formatted
+.playwright-mcp/
+
 # machine-generated
 pnpm-lock.yaml
 
