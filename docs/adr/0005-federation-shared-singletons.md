@@ -39,8 +39,9 @@ shared: {
 
 ## Why the asymmetry is safe
 
-Every `@sentra/*` injection key in the workspace is a namespaced **string**, not a
-`Symbol()`:
+Every `sentra:`-namespaced injection key in the workspace is a **string**, not a
+`Symbol()` — this table includes every one found, whether it is published from a
+`packages/*` plugin or defined locally by an app:
 
 | Key | Defined at |
 | --- | --- |
@@ -50,6 +51,7 @@ Every `@sentra/*` injection key in the workspace is a namespaced **string**, not
 | `'sentra:shell-bus'` | `packages/shell-contract/src/bus.ts` |
 | `'sentra:session'` | `packages/shell-contract/src/session.ts` |
 | `'sentra:ops'` | `apps/console/src/ops.ts` |
+| `'sentra:remote-overlays'` | `apps/shell/src/remote-overlays.ts` |
 
 Each is declared the same way — a plain string, cast to a typed `InjectionKey` for the
 type-checker's benefit only, e.g. `packages/plugin-analytics/src/plugin.ts`:

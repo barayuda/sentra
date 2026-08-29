@@ -105,10 +105,24 @@ above where the fault actually lives.
 
 ## What it depends on
 
-`@module-federation/runtime` and `@module-federation/vite`; `vue`, `vue-router`, and
-`pinia` (all `singleton: true` across the federation boundary — ADR 0005); the workspace
-packages `@sentra/shell-contract`, `@sentra/ui`, `@sentra/tokens`, and
-`@sentra/plugin-analytics`.
+- `@module-federation/runtime` and `@module-federation/vite` — the registry and the
+  build-time plugin the boot sequence above is built on.
+- `vue`, `vue-router`, `pinia` — the app instance, the one router, and the one active
+  store; all `singleton: true` across the federation boundary (ADR 0005).
+- `@sentra/shell-contract` — the `RemoteModule`/`RemoteContext`/`ShellBus` contract every
+  remote is loaded against.
+- `@sentra/ui`, `@sentra/tokens` — the toast host and the design tokens the shell's own
+  chrome is built from.
+- `@sentra/plugin-analytics` — installed once here with the _union_ of every loaded
+  remote's `analyticsEvents` schema, so one pipeline serves the whole platform.
+- `@sentra/result` — the `Result<T, E>` shape `parseRemoteManifest`'s `ManifestError`
+  returns (`src/registry/manifest.ts`).
+- `@sentra/sdk-commerce` and `@sentra/sdk-ops` — not imported for their clients, but for
+  their `/mocks` subpaths: `src/mocks/browser.ts` assembles **one** MSW Service Worker
+  for the whole platform from both SDKs' mock handler factories, because a page gets
+  exactly one Service Worker registration per scope — two remotes each calling
+  `setupWorker()` would not compose, so the shell owns the worker and each remote's
+  federated module stays free of a dev-only mocking concern.
 
 `@sentra/storefront` and `@sentra/console` are listed in `package.json`'s
 `devDependencies`, not `dependencies` — and purely so Turborepo's build graph builds both

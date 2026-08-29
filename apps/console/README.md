@@ -35,11 +35,20 @@ pnpm --filter @sentra/console preview --port 4174 --strictPort   # http://localh
 console (above), then boot the shell (`apps/shell/README.md`) — it fetches
 `remoteEntry.js` from `:4174` and grafts `consoleRoutes` under `/ops`.
 
-Every console route requires `meta.requiresRole: 'ops'` (`src/federated/routes.ts`),
-including the bare `/ops` index redirect — a redirect resolves during route matching,
-before the shell's role guard runs, so leaving it unmarked would let an unauthorised
-visitor learn that `/ops/orders` exists even while blocked from reaching it. Named risk
-area: access control.
+Every console route carries `meta.requiresRole: 'ops'` (`src/federated/routes.ts`),
+including the bare `/ops` index redirect. Checked against `vue-router@5.3.0`'s own
+navigation code (`pushWithRedirect`/`handleRedirectRecord`) and confirmed with a minimal
+reproduction: a redirect is resolved to its final target, and the navigation re-run
+against that target, entirely _before_ `router.beforeEach` fires — the guard
+(`apps/shell/src/guards.ts`'s `createRoleGuard`) only ever sees the fully-resolved route
+(`ops-orders`), never the original index location. Marking the index route's own `meta`
+therefore has no independent effect on the guard's decision here — the guard would block
+an unauthorised visitor identically without it, since the target it actually inspects
+already carries the requirement on its own record. The annotation is kept anyway, for a
+narrower reason: every entry in this file states its own requirement rather than one
+being inferred from a sibling, which is a consistency rule, not a distinct access-control
+mechanism. Named risk area: access control (for the requirement itself, not for this
+annotation's marginal effect).
 
 There is no `e2e` script in this app's `package.json`. The console's federated contract
 is exercised by the shell's own federated suite instead

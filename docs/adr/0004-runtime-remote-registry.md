@@ -18,16 +18,7 @@ The alternative is `registerRemotes()` against a manifest fetched at boot: the h
 once, with an empty remotes map, and learns what to load from a JSON file it fetches at
 runtime.
 
-## Decision
-
-`apps/shell/vite.config.ts` sets `remotes: {}` — deliberately empty, not a placeholder
-left by an unfinished config. `apps/shell/public/remotes.json` is fetched at boot,
-validated by `@sentra/shell-contract`'s `parseRemoteManifest`, and each entry that parses
-is passed to `registerRemotes(entries, { force: true })`, then loaded with
-`loadRemote('<name>/remote')`. `apps/shell/src/registry/boot.ts` runs this sequence in
-full before the shell's own `App` is mounted.
-
-## The spike's findings
+## Spike results
 
 Task 1 built a throwaway host/remote pair outside `packages/*`/`apps/*` specifically to
 answer six questions before any of this was built for real. The spike code is gone; these
@@ -65,12 +56,21 @@ are its findings, not predictions this ADR is making on paper.
    federation config, because remotes typecheck against `@sentra/shell-contract`'s
    hand-written `RemoteModule` and nothing downstream reads generated federation types.
 
-Finding 1 is the one with teeth, and it is why `type: 'module'` is hardcoded at the
-`registerRemotes` call site in `boot.ts` rather than threaded through as a `remotes.json`
-field: every remote on this platform is Vite-built and therefore always a module, and
-`remotes.json` is the one file advertised as hand-editable in a deployed `dist/`. A field
-that never varies, placed in a file humans edit by hand, is a way to reproduce
-`RUNTIME-001` and nothing else.
+Finding 1 is the one with teeth, and the decision below records why it is hardcoded at
+the `registerRemotes` call site rather than threaded through `remotes.json`: every remote
+on this platform is Vite-built and therefore always a module, and `remotes.json` is
+advertised as hand-editable in a deployed `dist/`. A field that never varies, in a file
+humans edit by hand, is a way to reproduce `RUNTIME-001` and nothing else.
+
+## Decision
+
+`apps/shell/vite.config.ts` sets `remotes: {}` — deliberately empty, not a placeholder
+left by an unfinished config. `apps/shell/public/remotes.json` is fetched at boot,
+validated by `@sentra/shell-contract`'s `parseRemoteManifest`, and each entry that parses
+is passed to `registerRemotes(entries, { force: true })`, then loaded with
+`loadRemote('<name>/remote')`. `apps/shell/src/registry/boot.ts` runs this sequence in
+full before the shell's own `App` is mounted. `type: 'module'` (finding 1 above) is
+hardcoded at that call site, not read from `remotes.json`.
 
 ## Consequences
 

@@ -7,7 +7,8 @@ import type { Result } from '@sentra/result'
  * on message text — with entirely different arms, because the failure modes
  * of a REST service with bearer auth are not the failure modes of Shopify's
  * cost-throttled GraphQL. Sharing the shape while not sharing the members is
- * the point: a convention travels, a taxonomy does not. See ADR 0006.
+ * the point: a convention travels, a taxonomy does not. See this package's
+ * README.
  *
  * - `network` — no usable response arrived, or the server itself failed.
  * - `auth` — the token was missing, rejected, or insufficient (401/403).

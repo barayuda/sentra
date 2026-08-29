@@ -87,7 +87,24 @@ rewriting M3's already-passing E2E suite to chase a header refactor — would ha
 tidier code at the price of the regression net that makes the refactor safe to ship at
 all. That trade was not taken.
 
-## What was rejected
+## Consequences
+
+**What this buys:** the shell and a remote exchange exactly the information each needs —
+a running total, a request to open something, a session change — without either
+importing the other's internals. `ShellEventMap` is typed, so a payload shape change is a
+compile error at every listener, not a runtime surprise discovered in a demo. Every
+remote's own `package.json` carries zero dependency on another remote; `ShellBus` (or
+`NULL_BUS`, standalone) is the only channel between them.
+
+**What this costs:** the event map is closed by design — adding a fifth event is a
+reviewed edit to `@sentra/shell-contract`, not something a remote can bolt on
+unilaterally. That is the right cost for a shared contract, but it is a real one: no
+remote can invent its own cross-remote event without that review landing first. And, per
+Ruling A above, the bus does not eliminate the two-header duplication it was chosen
+alongside — it only makes the duplication safe to keep, via the tests that would fail on
+drift.
+
+## Alternatives not taken
 
 - **A shared Pinia store across remotes.** Couples remotes to each other's exact state
   shape and update timing, and defeats independent deployment — a store's shape becomes
