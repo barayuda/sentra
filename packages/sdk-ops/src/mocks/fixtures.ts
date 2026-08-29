@@ -59,8 +59,14 @@ function buildOrders(): OrderDetail[] {
 /** Every fixture order, newest first by construction. */
 export const FIXTURE_ORDERS: readonly OrderDetail[] = buildOrders()
 
-/** The starting flag set. Mutated by the handlers so a toggle persists within a session. */
-export const FIXTURE_FLAGS: FeatureFlag[] = [
+/**
+ * The starting flag values.
+ *
+ * Kept separate from {@link FIXTURE_FLAGS} so {@link resetOpsMockFlags} has an
+ * untouched copy to restore from — `FIXTURE_FLAGS` itself gets mutated in
+ * place by the handlers.
+ */
+const SEED_FLAGS: readonly FeatureFlag[] = [
   {
     key: 'new-checkout',
     label: 'New checkout',
@@ -81,3 +87,24 @@ export const FIXTURE_FLAGS: FeatureFlag[] = [
   },
   { key: 'export-csv', label: 'CSV export', enabled: false, updatedAt: '2026-07-30T08:45:00.000Z' },
 ]
+
+/** The current flag set. Mutated by the handlers so a toggle persists within a session. */
+export const FIXTURE_FLAGS: FeatureFlag[] = SEED_FLAGS.map((flag) => ({ ...flag }))
+
+/**
+ * Restores {@link FIXTURE_FLAGS} to its seed values, in place.
+ *
+ * `FIXTURE_FLAGS` is a `const` array the handlers mutate by index
+ * (`FIXTURE_FLAGS[index] = updated`), so every other module holding a
+ * reference to it sees the same mutation. Resetting therefore has to rewrite
+ * the array's contents, the same array every importer already points at —
+ * rebinding a local variable to a fresh array would leave that shared array
+ * untouched and prove nothing. Mirrors `@sentra/sdk-commerce`'s
+ * `resetMockStore`, which resets that package's mutable cart state the same
+ * way for the same reason.
+ */
+export function resetOpsMockFlags(): void {
+  SEED_FLAGS.forEach((flag, index) => {
+    FIXTURE_FLAGS[index] = { ...flag }
+  })
+}

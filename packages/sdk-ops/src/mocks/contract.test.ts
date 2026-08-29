@@ -8,6 +8,7 @@ import {
   OPS_MOCK_BASE_URL,
   createOpsHandlers,
   createOpsMockControl,
+  resetOpsMockFlags,
 } from './index.ts'
 
 /**
@@ -26,15 +27,13 @@ function expectFailure(result: OpsResult<unknown>): OpsError {
 }
 
 /**
- * The flag fixtures as they exist before any test mutates them.
- *
- * `FIXTURE_FLAGS` is mutated in place by the `PATCH /flags/:key` handler so a
- * toggle persists within a session, exactly as it would against a real
- * service. That is also exactly what makes it a flake generator across
- * tests: without restoring it, a `setFlag` test in one `it` block would leak
- * into the next.
+ * The flag fixtures as they exist before any test mutates them, captured
+ * once for comparison only — never written back into `FIXTURE_FLAGS`.
+ * Restoring the shared array is {@link resetOpsMockFlags}'s job, not this
+ * snapshot's; keeping both would be two reset mechanisms disagreeing about
+ * which one is authoritative.
  */
-const SEED_FLAGS = FIXTURE_FLAGS.map((flag) => ({ ...flag }))
+const EXPECTED_SEED_FLAGS = FIXTURE_FLAGS.map((flag) => ({ ...flag }))
 
 const control = createOpsMockControl()
 const server = setupServer(...createOpsHandlers(control))
@@ -51,9 +50,7 @@ function client() {
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   server.resetHandlers()
-  SEED_FLAGS.forEach((flag, index) => {
-    FIXTURE_FLAGS[index] = { ...flag }
-  })
+  resetOpsMockFlags()
   control.scenario = 'ok'
   control.latencyMs = 0
 })
@@ -112,7 +109,7 @@ describe('flags', () => {
   it('lists the seed flags', async () => {
     const result = await client().listFlags()
     if (!result.ok) throw new Error('expected success')
-    expect(result.value).toEqual(SEED_FLAGS)
+    expect(result.value).toEqual(EXPECTED_SEED_FLAGS)
   })
 
   it('setFlag mutates the shared fixture, which listFlags then reflects', async () => {
@@ -130,13 +127,30 @@ describe('flags', () => {
     expect(after.value.find((flag) => flag.key === 'new-checkout')?.enabled).toBe(true)
   })
 
-  it('does not leak the previous test’s toggle, proving the reset actually runs', async () => {
+  it('does not leak the previous test’s toggle, proving the afterEach reset actually runs', async () => {
     /* This has no setFlag call of its own. If the `afterEach` reset above did
        not restore `FIXTURE_FLAGS`, this would still see `enabled: true` left
        over from the previous test. */
     const result = await client().listFlags()
     if (!result.ok) throw new Error('expected success')
-    expect(result.value).toEqual(SEED_FLAGS)
+    expect(result.value).toEqual(EXPECTED_SEED_FLAGS)
+  })
+
+  it('resetOpsMockFlags restores every seed value after a mutation, not just the count', async () => {
+    const mutated = await client().setFlag({ key: 'bulk-refunds', enabled: false })
+    if (!mutated.ok) throw new Error('expected success')
+    expect(mutated.value.enabled).toBe(false)
+    expect(FIXTURE_FLAGS.find((flag) => flag.key === 'bulk-refunds')?.enabled).toBe(false)
+
+    resetOpsMockFlags()
+
+    /* Deep-equal against every field of every flag, not merely the array
+       length — a reset that restored the wrong `updatedAt` or dropped a
+       field would pass a length check and fail this one. */
+    expect(FIXTURE_FLAGS).toEqual(EXPECTED_SEED_FLAGS)
+    const afterReset = await client().listFlags()
+    if (!afterReset.ok) throw new Error('expected success')
+    expect(afterReset.value).toEqual(EXPECTED_SEED_FLAGS)
   })
 })
 

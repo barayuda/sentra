@@ -54,6 +54,10 @@ export function createOpsHandlers(
       const direction: SortDirection = url.searchParams.get('direction') === 'asc' ? 'asc' : 'desc'
 
       const sorted = [...FIXTURE_ORDERS].sort((left, right) => {
+        /* Lexicographic comparison is correct for `placedAt`/`reference`/`status`
+           only because every fixture value shares the same field widths (fixed
+           ISO-8601 timestamps, `SEN-<4 digits>`, a fixed set of status strings).
+           Widening the fixtures without keeping widths uniform breaks this. */
         const [a, b] =
           sort === 'total'
             ? [Number(left.total.amount), Number(right.total.amount)]
