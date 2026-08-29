@@ -98,4 +98,32 @@ describe('DataTable', () => {
     const scroller = getByRole('table').querySelector('[tabindex="0"]')
     expect(scroller?.getAttribute('aria-label')).toBe('Orders rows, scrollable')
   })
+
+  /**
+   * `rows` is typed `readonly Row[]` precisely so a caller holding its data
+   * behind a `shallowRef<readonly Row[]>` — the shape a server-shaped query
+   * naturally produces, e.g. the console's `OrdersView` — can pass it straight
+   * through without copying. A frozen array is the runtime proof: if any
+   * internal path ever tried to mutate `rows` (sort in place, push, splice),
+   * this would throw instead of silently succeeding.
+   */
+  it('accepts a readonly (frozen) rows array without mutating it', () => {
+    const frozenRows: readonly Product[] = Object.freeze(manyRows.slice(0, 3))
+    render(DataTable, { props: { columns, rows: frozenRows } })
+    expect(screen.getByText('Product 0')).toBeTruthy()
+  })
+
+  /**
+   * A server-shaped consumer mounts this component with `rows: []` (nothing
+   * has loaded yet) and populates it once a request resolves — the console's
+   * `OrdersView` does exactly this. Without the `offsetHeight`/`offsetWidth`
+   * stub in `vitest.setup.ts`, happy-dom's hardcoded zero-size measurement
+   * permanently overwrites the virtualizer's `initialRect` seed and this test
+   * renders no rows at all; see that file's doc comment for the root cause.
+   */
+  it('renders rows that arrive after mount, not just rows present at mount', async () => {
+    const { rerender } = render(DataTable, { props: { columns, rows: [] } })
+    await rerender({ columns, rows: manyRows.slice(0, 1) })
+    expect(await screen.findByText('Product 0')).toBeTruthy()
+  })
 })
