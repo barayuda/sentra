@@ -1,0 +1,45 @@
+{
+  "name": "@sentra/console",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./mocks": "./src/mocks/browser.ts",
+    "./federated": "./src/federated/index.ts"
+  },
+  "scripts": {
+    "dev": "vite --port 5174 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 4174 --strictPort",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "vue-tsc --noEmit",
+    "init-msw": "msw init public --no-save"
+  },
+  "dependencies": {
+    "@sentra/plugin-analytics": "workspace:*",
+    "@sentra/sdk-ops": "workspace:*",
+    "@sentra/shell-contract": "workspace:*",
+    "@sentra/tokens": "workspace:*",
+    "@sentra/ui": "workspace:*",
+    "pinia": "4.0.3",
+    "vue": "3.5.42",
+    "vue-router": "5.3.0"
+  },
+  "devDependencies": {
+    "@module-federation/vite": "1.20.9",
+    "@sentra/config": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/vue": "8.1.0",
+    "@vitejs/plugin-vue": "6.0.8",
+    "@vitest/coverage-v8": "4.1.11",
+    "@vue/test-utils": "2.4.11",
+    "happy-dom": "20.11.8",
+    "msw": "2.15.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vite": "8.2.2",
+    "vitest": "4.1.11",
+    "vue-tsc": "3.3.11"
+  }
+}

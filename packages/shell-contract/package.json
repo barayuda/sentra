@@ -1,0 +1,30 @@
+{
+  "name": "@sentra/shell-contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sentra/result": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "vue-router": "^5.0.0"
+  },
+  "devDependencies": {
+    "@sentra/config": "workspace:*",
+    "@vue/test-utils": "2.4.11",
+    "happy-dom": "20.11.8",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11",
+    "vue": "3.5.42",
+    "vue-router": "5.3.0"
+  }
+}

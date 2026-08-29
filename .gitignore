@@ -13,6 +13,9 @@ storybook-static/
 .cache/
 .vite/
 
+# @module-federation/vite build diagnostics, regenerated per build
+.mf/
+
 # environment — never commit real credentials
 .env
 .env.*

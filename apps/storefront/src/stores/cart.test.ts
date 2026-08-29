@@ -1,5 +1,7 @@
 import type { Cart, StorefrontClient, StorefrontResult } from '@sentra/sdk-commerce'
+import { createShellBus, shellBusPlugin } from '@sentra/shell-contract'
 import { createPinia, setActivePinia } from 'pinia'
+import { createApp } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setStorefrontClient } from '../storefront.ts'
 import { CART_ID_STORAGE_KEY, useCartStore } from './cart.ts'
@@ -271,5 +273,27 @@ describe('derived state', () => {
     store.forget()
     expect(store.cart).toBeNull()
     expect(localStorage.getItem(CART_ID_STORAGE_KEY)).toBeNull()
+  })
+
+  it('publishes the line total to the bus after a successful add', async () => {
+    stubClient()
+    const bus = createShellBus()
+    const seen: number[] = []
+    bus.on('cart:updated', (payload) => seen.push(payload.totalQuantity))
+
+    const app = createApp({})
+    app.use(createPinia())
+    app.use(shellBusPlugin, bus)
+    const store = app.runWithContext(() => useCartStore())
+
+    await store.addLine('gid://shopify/ProductVariant/1', 2)
+
+    expect(seen.at(-1)).toBe(store.itemCount)
+  })
+
+  it('does not throw when no bus is installed', async () => {
+    stubClient()
+    const store = useCartStore()
+    await expect(store.addLine('gid://shopify/ProductVariant/1', 1)).resolves.not.toThrow()
   })
 })

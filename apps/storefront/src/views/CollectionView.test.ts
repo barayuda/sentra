@@ -114,13 +114,12 @@ describe('CollectionView', () => {
        branch is active: `blockingError` only takes over when the grid has
        zero products, which would replace `role="list"` with a `state-error`
        StateBlock entirely instead of leaving it mounted alongside the alert.
-       (Individual product-card text isn't asserted here: @tanstack/vue-virtual
-       doesn't recompute its visible row window under happy-dom when the
-       `products` count changes after mount, so the cards don't render in this
-       test environment even though the list container does — see
-       `ProductGrid.test.ts` for coverage of actual card rendering.) */
+       `findByText('Piece 0')` is the individual-card assertion: it only
+       passes if a real product card actually rendered inside the grid, not
+       just the empty `role="list"` container. */
     expect(getByRole('list')).toBeTruthy()
     expect(queryByTestId('state-error')).toBeNull()
     expect(await findByText('Tableware')).toBeTruthy()
+    expect(await findByText('Piece 0')).toBeTruthy()
   })
 })

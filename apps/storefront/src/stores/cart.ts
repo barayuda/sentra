@@ -5,8 +5,9 @@ import type {
   StorefrontError,
   StorefrontResult,
 } from '@sentra/sdk-commerce'
+import { NULL_BUS, SHELL_BUS_INJECTION_KEY } from '@sentra/shell-contract'
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef } from 'vue'
+import { computed, inject, ref, shallowRef } from 'vue'
 import { getStorefrontClient } from '../storefront.ts'
 
 /** Where the cart id is persisted between visits. */
@@ -54,6 +55,32 @@ export const useCartStore = defineStore('cart', () => {
   const error = shallowRef<StorefrontError | null>(null)
   /** Count, not a flag — see the concurrency test. */
   const pending = ref(0)
+
+  /**
+   * The shell's bus, or a no-op when the store is constructed outside an app
+   * — which the store's own unit tests do, and which `useShellBus()` would
+   * throw on. The asymmetry with components is deliberate: at this call site
+   * the bus is telemetry, so a missed emit degrades the shell header's badge
+   * while the cart itself keeps working. A component whose button publishes an
+   * event is broken without a bus, so `useShellBus()` still throws there.
+   *
+   * The trailing `?? NULL_BUS` matters: Vue's `inject()` only honours its
+   * default value when called under a component instance or an
+   * `app.runWithContext` — with neither (a bare `useCartStore()` after only
+   * `setActivePinia(createPinia())`, as this store's own tests do), it
+   * returns `undefined` outright. Pinia only threads `runWithContext` through
+   * a setup store when the pinia instance has been installed on an app
+   * (`app.use(pinia)`, which sets `pinia._a`); a pinia that was merely
+   * activated has no app to run with, so `inject`'s own default is
+   * unreachable and this fallback is what actually makes the store usable
+   * outside an app.
+   */
+  const bus = inject(SHELL_BUS_INJECTION_KEY, NULL_BUS) ?? NULL_BUS
+
+  /** Publishes the current line total so any host header can badge it. */
+  function publishCount(): void {
+    bus.emit('cart:updated', { totalQuantity: itemCount.value })
+  }
 
   /**
    * Invalidates a superseded mutation's write. Two overlapping calls resolve
@@ -133,9 +160,11 @@ export const useCartStore = defineStore('cart', () => {
       if (result.value === null) {
         writeStoredCartId(null)
         cart.value = null
+        publishCount()
         return
       }
       adopt(result.value)
+      publishCount()
     } finally {
       pending.value -= 1
     }
@@ -161,6 +190,7 @@ export const useCartStore = defineStore('cart', () => {
       : await run(() => client.createCart({ lines: [{ merchandiseId, quantity }] }))
     if (!next) return false
     adopt(next)
+    publishCount()
     return true
   }
 
@@ -186,6 +216,7 @@ export const useCartStore = defineStore('cart', () => {
     )
     if (!next) return false
     adopt(next)
+    publishCount()
     return true
   }
 
@@ -202,6 +233,7 @@ export const useCartStore = defineStore('cart', () => {
     )
     if (!next) return false
     adopt(next)
+    publishCount()
     return true
   }
 
@@ -210,6 +242,7 @@ export const useCartStore = defineStore('cart', () => {
     cart.value = null
     error.value = null
     writeStoredCartId(null)
+    publishCount()
   }
 
   return {

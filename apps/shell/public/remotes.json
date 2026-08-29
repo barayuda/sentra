@@ -1,0 +1,12 @@
+[
+  {
+    "name": "storefront",
+    "entry": "http://127.0.0.1:4173/remoteEntry.js",
+    "basePath": "/shop"
+  },
+  {
+    "name": "console",
+    "entry": "http://127.0.0.1:4174/remoteEntry.js",
+    "basePath": "/ops"
+  }
+]

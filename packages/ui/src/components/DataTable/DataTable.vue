@@ -23,13 +23,44 @@ import type { ColumnDef } from './columns.ts'
  * Sorting is controlled: clicking a sortable header emits `update:sort`; the
  * parent reorders `rows` and reflects the state back through `sortKey` /
  * `sortDirection`. The table never mutates data it does not own.
+ *
+ * The empty state and the scroll viewport below are toggled with `v-show`,
+ * not `v-if`/`v-else`. The viewport carries `ref="scroller"`, which
+ * `useVirtualizer` reads through `getScrollElement` and, when that element
+ * changes identity, re-subscribes its resize observer from scratch. A
+ * server-shaped consumer typically mounts this component with `rows: []` and
+ * populates it once a request resolves — with `v-if`/`v-else` that means the
+ * scroller element is destroyed and a brand-new one created the moment rows
+ * arrive, forcing an avoidable unsubscribe/resubscribe/remeasure cycle right
+ * as the table is first becoming useful. `v-show` keeps one stable element
+ * mounted (merely hidden) from the start, so that cycle never has to happen.
+ *
+ * This is a real but secondary improvement — it is *not* what fixes rows
+ * failing to render after an async populate. That defect turned out to be a
+ * test-environment artefact, not a template one: see the long comment in
+ * `packages/ui/vitest.setup.ts` for the actual root cause (happy-dom reports
+ * every element's `offsetHeight`/`offsetWidth` as a hardcoded 0, which
+ * permanently overwrites `useVirtualizer`'s `initialRect` seed the first time
+ * it measures — regardless of whether the scroller existed at mount via
+ * `v-if` or was merely hidden via `v-show`). A prior diagnosis blamed
+ * `v-if`/`v-else` element identity for that defect; it does not reproduce
+ * once the vitest.setup.ts stub is reverted and `v-if`/`v-else` restored
+ * together, which rules that theory out.
  */
 const props = withDefaults(
   defineProps<{
     /** Typed column contract; order defines display order. */
     columns: ColumnDef<Row>[]
-    /** Row data. Each row needs a stable `id` for keying. */
-    rows: Row[]
+    /**
+     * Row data. Each row needs a stable `id` for keying.
+     *
+     * `readonly` because this component only ever reads its rows — it never
+     * reorders or mutates them, sorting is controlled by the parent — so a
+     * caller holding its rows behind a `readonly Row[]` (a `shallowRef` from a
+     * server-shaped query, say) should not have to cast or copy just to pass
+     * them here.
+     */
+    rows: readonly Row[]
     /** Fixed row height in pixels — the virtualiser's size estimate. */
     rowHeightPx?: number
     /** Scroll viewport height in pixels. */
@@ -127,12 +158,12 @@ function cellValue(row: Row, column: ColumnDef<Row>): unknown {
       </div>
     </div>
 
-    <div v-if="rows.length === 0" class="px-3 py-8 text-center text-sm text-neutral-500">
+    <div v-show="rows.length === 0" class="px-3 py-8 text-center text-sm text-neutral-500">
       <slot name="empty">No rows to display.</slot>
     </div>
 
     <div
-      v-else
+      v-show="rows.length > 0"
       ref="scroller"
       role="rowgroup"
       tabindex="0"

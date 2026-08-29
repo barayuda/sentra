@@ -41,6 +41,40 @@ of instantaneous. Setting a scenario mid-session and then triggering the relevan
 (loading the collection, opening a product, adding to cart) is a controlled, repeatable way
 to demonstrate every failure state live rather than only in a screenshot.
 
+## Running under the shell
+
+This same app is also loaded, unmodified, as a federated remote by `apps/shell` — the
+same `src/federated/index.ts` entry point drives both `main.ts` (standalone) and the
+shell's boot sequence. To run it that way:
+
+```bash
+VITE_SENTRA_MOCKS=true pnpm --filter @sentra/storefront build
+pnpm --filter @sentra/storefront preview --port 4173 --strictPort   # http://localhost:4173
+```
+
+`preview` here is a bare `vite preview` in `package.json` — it takes no port or host by
+default, so both flags above must be passed explicitly; the shell's own Playwright config
+does the same. Then boot the shell (`apps/shell/README.md`), which fetches
+`http://127.0.0.1:4173/remoteEntry.js` per `apps/shell/public/remotes.json` and mounts
+this app's routes under `/shop`.
+
+Two things change under the shell, and nothing else does:
+
+- **The header.** `apps/shell/src/components/ShellHeader.vue` owns navigation and the
+  cart badge when this app runs under the shell; `AppHeader.vue` above still owns the
+  equivalent markup when this app runs standalone. Both exist, deliberately — see ADR 0006
+  ("Ruling A") for why the header did not move wholesale, and what that costs.
+- **The cart badge and drawer.** The shell has no import on this app's Pinia cart store —
+  that would make it a build-time dependency and undo the federation boundary (ADR 0006).
+  Instead, the cart store emits `cart:updated` on `@sentra/shell-contract`'s `ShellBus`
+  whenever its quantity changes, and the shell's header emits `cart:open-requested` when
+  its own cart button is clicked; this app's own overlay is what still renders the drawer.
+
+`preview: { cors: true }` in `vite.config.ts` exists only for this: without it, the shell
+(a different origin, `:4175`) cannot fetch this app's `remoteEntry.js` at all, and the
+browser blocks the script outright. A real deployment should allow-list the host's actual
+origin rather than reflecting every origin that asks. Named risk area: access control.
+
 ## Architecture
 
 Two routes (`src/router.ts`):

@@ -1,30 +1,25 @@
 <script setup lang="ts">
-import { useAnalytics } from '@sentra/plugin-analytics'
-import { ToastHost } from '@sentra/ui'
-import { onMounted, ref } from 'vue'
+import { useShellBus } from '@sentra/shell-contract'
+import { RouterView } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
-import CartDrawer from './components/CartDrawer.vue'
+import CartOverlay from './federated/CartOverlay.vue'
 import { useCartStore } from './stores/cart.ts'
 
 /**
- * Application shell: header, routed view, cart drawer, toast host.
+ * Application shell: header, routed view, cart overlay.
  *
- * The cart is restored after mount rather than during setup so a slow or
- * failing cart lookup never delays first paint — the catalogue is useful before
- * the cart is known.
+ * Restoring the cart is `registerStorefront()`'s job, not this component's —
+ * `register` runs in both standalone and federated mode, so a call here would
+ * either duplicate it (standalone) or be the only place it happens at all
+ * (federated, where this component never mounts). This component only reads
+ * the store the registration hook already populated.
  */
 const cart = useCartStore()
-const analytics = useAnalytics()
-const cartOpen = ref(false)
+const bus = useShellBus()
 
-onMounted(() => {
-  void cart.restore()
-})
-
-/** Opens the drawer and reports it with the item count for funnel analysis. */
+/** Routes the header's button through the same event the shell's header uses. */
 function openCart(): void {
-  cartOpen.value = true
-  analytics.track('cart_open', { itemCount: cart.itemCount })
+  bus.emit('cart:open-requested', { origin: 'storefront-header' })
 }
 </script>
 
@@ -34,7 +29,6 @@ function openCart(): void {
     <main class="mx-auto max-w-6xl px-4 py-6">
       <RouterView />
     </main>
-    <CartDrawer v-model="cartOpen" />
-    <ToastHost />
+    <CartOverlay />
   </div>
 </template>
