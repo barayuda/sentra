@@ -52,3 +52,6 @@ docs/superpowers/
 
 # agent execution scratch (ledgers, task briefs, review packages) — local only
 .superpowers/
+
+# isolated milestone worktrees — local only, removed once the branch merges
+.worktrees/
