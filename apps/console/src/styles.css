@@ -1,0 +1,18 @@
+/**
+ * Application stylesheet.
+ *
+ * `@sentra/ui/styles.css` brings the design tokens and the Tailwind import,
+ * and documents the cascade-layer strategy that lets this application override
+ * any component with an ordinary unlayered rule.
+ */
+@import '@sentra/ui/styles.css';
+
+/**
+ * `@sentra/ui` is consumed as TypeScript and SFC source, not as compiled CSS,
+ * so this application's Tailwind build is what generates the utilities the
+ * library's components reference. Tailwind's automatic source detection is
+ * rooted at this file and skips `node_modules`, so the library's source has to
+ * be named explicitly — without this line every Sentra component renders
+ * completely unstyled.
+ */
+@source '../../../packages/ui/src';
