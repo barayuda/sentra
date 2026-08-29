@@ -34,9 +34,7 @@ const MANIFEST_URL = '/remotes.json'
  * which has no template compiler and throws
  * `Component provided template option but runtime compilation is not
  * supported` the first time this route renders. A render function needs no
- * compiler, so it works in that build. This is a defect in the brief's
- * Step 10 listing, not covered by the eleven corrections; recorded here per
- * the Method section.
+ * compiler, so it works in that build.
  */
 const REMOTE_HOST: Component = { render: () => h(RouterView) }
 
@@ -65,9 +63,10 @@ function fallbackRoutes(
 export async function bootShell(): Promise<void> {
   /* 1. Mocks first. The worker must control the page before any remote code
         runs, or the storefront's first request escapes to the network.
-        Gated on `mocksEnabled()`, not `import.meta.env.DEV` — correction 8 —
-        because the federated E2E suite drives this against a preview build,
-        where `DEV` is false. */
+        Gated on `mocksEnabled()`, not `import.meta.env.DEV`: the federated
+        E2E suite drives this against a preview build, and `DEV` is false in
+        a preview build, so a `DEV` check would silently turn mocking off
+        under the exact conditions the suite runs in. */
   if (mocksEnabled()) {
     const { startShellMocks } = await import('../mocks/browser.ts')
     await startShellMocks()
@@ -75,7 +74,9 @@ export async function bootShell(): Promise<void> {
 
   /* 2. Manifest. A failure here is survivable: the shell boots with chrome,
         a 404 route, and — when there is nothing left to route to — a
-        platform-level `RemoteUnavailable` at `/` (correction 3). */
+        platform-level `RemoteUnavailable` at `/`. A missing or malformed
+        manifest is an infrastructure problem, not an authorization one, so
+        it must never resolve to a `/forbidden` redirect. */
   const manifest = await fetchRemoteManifest(MANIFEST_URL)
   const parsed = manifest.ok ? manifest.value : { entries: [], rejected: [] }
   if (!manifest.ok) {
@@ -88,8 +89,8 @@ export async function bootShell(): Promise<void> {
   /* 3. Registration, then loading. `force: true` lets a re-register replace an
         entry rather than being ignored — see ADR 0004 and the Task 1 spike.
 
-        `type: 'module'` is hardcoded, not read from the manifest (correction
-        10). Module Federation's script loader defaults a remote entry to a
+        `type: 'module'` is hardcoded, not read from the manifest. Module
+        Federation's script loader defaults a remote entry to a
         classic `<script>`, but `@module-federation/vite` only ever emits an
         ES module, so without this the browser throws `Cannot use import
         statement outside a module` and the runtime reports it as the opaque
@@ -109,10 +110,10 @@ export async function bootShell(): Promise<void> {
     { force: true },
   )
 
-  /* Gated on the mocks flag, not `import.meta.env.DEV` (correction 8): the
-     E2E suite drives `?break=` against a preview build. A real deployment
-     sets no mocks flag, so a visitor cannot disable a remote with a query
-     string. */
+  /* Gated on the mocks flag, not `import.meta.env.DEV`: the E2E suite
+     drives `?break=` against a preview build, where `DEV` is false, so a
+     `DEV` check would never fire there. A real deployment sets no mocks
+     flag, so a visitor cannot disable a remote with a query string. */
   const broken = mocksEnabled() ? brokenRemoteNames(globalThis.location.search) : new Set<string>()
 
   const outcomes = await loadRemotes(parsed.entries, async (name) => {
@@ -131,13 +132,13 @@ export async function bootShell(): Promise<void> {
       outcome.status === 'failed',
   )
 
-  /* Correction 3 & 4: an empty or broken manifest is an infrastructure
-     failure, not an authorization failure — it must not redirect to
-     `/forbidden`. When there are no usable entries at all, `/` renders
-     `RemoteUnavailable` naming "The platform", with a reason that keeps the
-     two failure cases distinct: a manifest that could not be fetched or
-     parsed reports its own error message, while a manifest that parsed fine
-     but listed nothing says so explicitly. */
+  /* An empty or broken manifest is an infrastructure failure, not an
+     authorization failure — it must not redirect to `/forbidden`. When
+     there are no usable entries at all, `/` renders `RemoteUnavailable`
+     naming "The platform", with a reason that keeps the two failure cases
+     distinct: a manifest that could not be fetched or parsed reports its
+     own error message, while a manifest that parsed fine but listed
+     nothing says so explicitly. */
   const rootRoute: RouteRecordRaw =
     parsed.entries.length === 0
       ? {
@@ -162,11 +163,11 @@ export async function bootShell(): Promise<void> {
     ],
   })
 
-  /* No hand-rolled no-op bus here (correction 4): `createShellBus()` is cheap
-     and safe to construct unconditionally, including when there are zero
-     entries — the header still mounts and still needs a real bus. `NULL_BUS`
-     stays reserved for the `inject()` default at call sites, per its own
-     doc comment in `@sentra/shell-contract`. */
+  /* No hand-rolled no-op bus here: `createShellBus()` is cheap and safe to
+     construct unconditionally, including when there are zero entries — the
+     header still mounts and still needs a real bus. `NULL_BUS` stays
+     reserved for the `inject()` default at call sites, per its own doc
+     comment in `@sentra/shell-contract`. */
   const bus = createShellBus()
   const { plugin: sessionPlugin, session } = createSessionPlugin(initialSession())
   router.beforeEach(createRoleGuard(() => session.value))
@@ -176,8 +177,9 @@ export async function bootShell(): Promise<void> {
   app.use(toastPlugin)
   app.use(shellBusPlugin, bus)
   app.use(sessionPlugin)
-  /* Correction 1: `analyticsPlugin` is a plugin object, not a factory —
-     `app.use(analyticsPlugin, options)`, not `app.use(analyticsPlugin(options))`. */
+  /* `analyticsPlugin` is a plugin object, not a factory — it is installed
+     as `app.use(analyticsPlugin, options)`, not
+     `app.use(analyticsPlugin(options))`. */
   app.use(analyticsPlugin, {
     schema: mergeEventSchemas(loaded.map((outcome) => outcome.module.analyticsEvents ?? {})),
     transport: createShellAnalyticsTransport(),
@@ -200,10 +202,10 @@ export async function bootShell(): Promise<void> {
     })
   }
 
-  /* Correction 6: `remote:failed` is collected here and emitted only after
-     `app.mount()`, below. `ShellBus.emit` delivers synchronously to whatever
-     is subscribed *right now* and keeps no replay buffer — emitting before
-     mount would have zero subscribers and silently drop the event. */
+  /* `remote:failed` is collected here and emitted only after `app.mount()`,
+     below. `ShellBus.emit` delivers synchronously to whatever is subscribed
+     *right now* and keeps no replay buffer — emitting before mount would
+     have zero subscribers and silently drop the event. */
   const bootFailures: { name: string; reason: string }[] = []
   for (const outcome of failed) {
     console.error(`[sentra] remote ${outcome.entry.name} failed: ${outcome.reason}`)

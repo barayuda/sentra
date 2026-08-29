@@ -13,7 +13,9 @@
  * duplicated lines.
  *
  * `registry/break.ts`'s `?break=` control is gated on this same flag at its
- * call site in `registry/boot.ts` — see Task 11 correction 8.
+ * call site in `registry/boot.ts`, for the same reason: a real deployment
+ * carries no mocks flag, so a visitor cannot use a query string to disable
+ * a remote.
  */
 export function mocksEnabled(): boolean {
   return import.meta.env.VITE_SENTRA_MOCKS === 'true'

@@ -23,9 +23,13 @@ describe('fetchRemoteManifest', () => {
   })
 
   it('reports a missing manifest as an error, not an exception', async () => {
+    // The body is a well-formed manifest on purpose: if the status check is
+    // ever removed or inverted, this body would parse successfully and the
+    // assertion below would fail, proving the status check — not the JSON
+    // parse — is what this test actually exercises.
     const result = await fetchRemoteManifest(
       '/remotes.json',
-      vi.fn(async () => new Response('nope', { status: 404 })),
+      vi.fn(async () => jsonResponse(GOOD, 404)),
     )
     expect(result.ok).toBe(false)
   })

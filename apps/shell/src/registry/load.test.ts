@@ -42,11 +42,12 @@ describe('loadRemotes', () => {
   })
 
   /*
-   * Correction 5: the brief's original version of this test asserted
-   * `started === ['storefront', 'console']` after the whole call resolved,
-   * which a strictly serial `for…await` loop produces identically — the
-   * assertion passes against the very bug it claims to catch, because a
-   * serial loop still visits entries in document order.
+   * A version of this test that asserts `started === ['storefront',
+   * 'console']` only after the whole call resolves would pass against a
+   * strictly serial `for…await` loop just as easily as a concurrent one —
+   * the assertion passes against the very bug it claims to catch, because a
+   * serial loop still visits entries in document order and finishes with
+   * the same final `started` array.
    *
    * The version below blocks the first remote's load on a promise this test
    * controls, flushes the microtask queue, and asserts that the *second*

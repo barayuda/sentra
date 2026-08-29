@@ -58,8 +58,8 @@ describe('createRoleGuard', () => {
   })
 
   /*
-   * Correction 10: the case above (a *valid* `shopper` session visiting
-   * `/forbidden`) is weak — `/forbidden` carries no `requiresRole`, so
+   * The case above (a *valid* `shopper` session visiting `/forbidden`) is
+   * weak — `/forbidden` carries no `requiresRole`, so
    * `if (!required) return true` fires before the session is ever read, and
    * almost any implementation — including one that reads the session before
    * checking `required` — would still need to actually redirect somewhere to
