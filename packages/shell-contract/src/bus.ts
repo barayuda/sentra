@@ -39,6 +39,10 @@ export interface ShellBus {
   /**
    * Subscribes to an event.
    *
+   * Subscribing the same handler function twice is a no-op — subscribers are
+   * held in a `Set`, so it is delivered once and a single `off()` removes it.
+   * This differs from Node's `EventEmitter`, which would deliver twice.
+   *
    * @param event - Event name.
    * @param handler - Called with each payload.
    * @returns A function that unsubscribes. Callers hold it rather than

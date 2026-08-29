@@ -16,3 +16,13 @@ export {
   type Session,
   type SessionPluginHandle,
 } from './session.ts'
+export {
+  manifestError,
+  parseRemoteManifest,
+  type ManifestError,
+  type ParsedManifest,
+  type RejectedEntry,
+  type RemoteManifestEntry,
+} from './manifest.ts'
+export type { EventSchema, RemoteContext, RemoteModule } from './remote.ts'
+import './route-meta.ts'
