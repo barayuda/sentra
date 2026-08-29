@@ -89,7 +89,7 @@ Prerequisites: Node `>= 24.15.0` (see `.nvmrc`) and pnpm `>= 10.34.5`.
 ```bash
 pnpm install
 pnpm build        # generates tokens CSS, then builds the ui library
-pnpm test         # 484 tests across all packages; the tokens suite also passes under Jest (ADR 0002)
+pnpm test         # 486 tests across all packages; the tokens suite also passes under Jest (ADR 0002)
 pnpm --filter @sentra/ui storybook   # component workbench on :6006
 ```
 
