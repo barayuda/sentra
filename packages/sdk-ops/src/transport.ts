@@ -183,7 +183,7 @@ export function createOpsTransport(options: OpsTransportOptions): OpsTransport {
         return err(
           validationError(
             redact(errorBody?.message ?? 'the request was rejected'),
-            errorBody?.field ?? '',
+            redact(errorBody?.field ?? ''),
           ),
         )
       }
