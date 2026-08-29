@@ -25,9 +25,17 @@ describe('ShellHeader', () => {
 
   it('updates the badge when a remote publishes cart:updated', async () => {
     const { bus } = renderHeader()
+    /* Two different quantities, in sequence: a hardcoded badge value could
+       satisfy a single emission but not both, so this is what actually
+       proves the badge tracks the event rather than a literal. */
     bus.emit('cart:updated', { totalQuantity: 3 })
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /cart, 3 items/i })).toBeTruthy()
+    })
+
+    bus.emit('cart:updated', { totalQuantity: 5 })
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /cart, 5 items/i })).toBeTruthy()
     })
   })
 
