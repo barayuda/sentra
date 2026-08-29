@@ -115,7 +115,7 @@ importers:
         version: 8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(yaml@2.9.0)
       vue-tsc:
         specifier: 3.3.11
         version: 3.3.11(@typescript/typescript6@6.0.2)
@@ -130,7 +130,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(yaml@2.9.0)
 
   packages/plugin-analytics:
     dependencies:
@@ -158,7 +158,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(yaml@2.9.0)
       vue:
         specifier: 3.5.42
         version: 3.5.42(typescript@7.0.2)
@@ -176,7 +176,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(yaml@2.9.0)
 
   packages/sdk-commerce:
     dependencies:
@@ -222,10 +222,38 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(yaml@2.9.0)
       vue:
         specifier: 3.5.42
         version: 3.5.42(typescript@7.0.2)
+
+  packages/shell-contract:
+    dependencies:
+      '@sentra/result':
+        specifier: workspace:*
+        version: link:../result
+    devDependencies:
+      '@sentra/config':
+        specifier: workspace:*
+        version: link:../config
+      '@vue/test-utils':
+        specifier: 2.4.11
+        version: 2.4.11(@vue/compiler-dom@3.5.42)(@vue/server-renderer@3.5.42)(vue@3.5.42(typescript@7.0.2))
+      happy-dom:
+        specifier: 20.11.8
+        version: 20.11.8
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(yaml@2.9.0)
+      vue:
+        specifier: 3.5.42
+        version: 3.5.42(typescript@7.0.2)
+      vue-router:
+        specifier: 5.3.0
+        version: 5.3.0(@vue/compiler-sfc@3.5.42)(esbuild@0.28.2)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@7.0.2)(vue@3.5.42(typescript@7.0.2)))(rolldown@1.2.6)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(vue@3.5.42(typescript@7.0.2))
 
   packages/tokens:
     devDependencies:
@@ -255,7 +283,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(yaml@2.9.0)
 
   packages/ui:
     dependencies:
@@ -334,7 +362,7 @@ importers:
         version: 5.0.3(@typescript/typescript6@6.0.2)(@vue/language-core@3.3.11)(esbuild@0.28.2)(rolldown@1.2.6)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(yaml@2.9.0)
       vue:
         specifier: 3.5.42
         version: 3.5.42(@typescript/typescript6@6.0.2)
@@ -5754,7 +5782,6 @@ packages:
       '@vitest/ui': 4.1.11
       happy-dom: '*'
       jsdom: '*'
-      vite: ^6.0.0 || ^7.0.0 || ^8.0.0
     peerDependenciesMeta:
       '@edge-runtime/vm':
         optional: true
@@ -8198,7 +8225,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(yaml@2.9.0)
 
   '@vitest/expect@3.2.4':
     dependencies:
@@ -11779,7 +11806,7 @@ snapshots:
       jiti: 2.7.0
       yaml: 2.9.0
 
-  vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)):
+  vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(yaml@2.9.0):
     dependencies:
       '@vitest/expect': 4.1.11
       '@vitest/mocker': 4.1.11(msw@2.15.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
@@ -11807,9 +11834,20 @@ snapshots:
       happy-dom: 20.11.8
       jsdom: 30.0.1
     transitivePeerDependencies:
+      - '@vitejs/devtools'
+      - esbuild
+      - jiti
+      - less
       - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
 
-  vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.11.8)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)):
+  vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(esbuild@0.28.2)(happy-dom@20.11.8)(jiti@2.7.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(yaml@2.9.0):
     dependencies:
       '@vitest/expect': 4.1.11
       '@vitest/mocker': 4.1.11(msw@2.15.0(@types/node@24.13.3)(typescript@7.0.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
@@ -11837,7 +11875,18 @@ snapshots:
       happy-dom: 20.11.8
       jsdom: 30.0.1
     transitivePeerDependencies:
+      - '@vitejs/devtools'
+      - esbuild
+      - jiti
+      - less
       - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
 
   void-elements@3.1.0: {}
 
