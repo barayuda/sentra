@@ -6,7 +6,7 @@ import {
   shellBusPlugin,
   type RemoteModule,
 } from '@sentra/shell-contract'
-import { RemoteUnavailable, toastPlugin } from '@sentra/ui'
+import { RemoteUnavailable, toastPlugin, useToast } from '@sentra/ui'
 import { createPinia } from 'pinia'
 import { createApp, h, type Component } from 'vue'
 import { createRouter, createWebHistory, RouterView, type RouteRecordRaw } from 'vue-router'
@@ -217,6 +217,34 @@ export async function bootShell(): Promise<void> {
   app.use(router)
   await router.isReady()
   app.mount('#app')
+
+  /*
+   * `remote:failed` gets its one production subscriber here: a danger toast.
+   * `useToast()` is an injection, so it needs the app's context —
+   * `app.runWithContext` is the sanctioned way to read one outside `setup()`,
+   * the same pattern `apps/storefront/src/main.ts` and
+   * `apps/storefront/src/federated/register.ts` use for `useAnalytics()`.
+   *
+   * Why a toast does not double-report a failure `RemoteUnavailable` already
+   * shows: `RemoteUnavailable` only renders for whoever is actually looking
+   * at the failed remote's own route (`fallbackRoutes`, above) — it says
+   * nothing to someone on `/`, or on a different, healthy remote, who has no
+   * other way to learn that part of the platform is down. The toast exists
+   * for exactly that second audience. The one case where both could fire —
+   * someone whose very first URL already resolves to the failed remote's
+   * fallback route — is where they *would* genuinely see the same failure
+   * twice, so that case is the one skipped below by comparing the toast's
+   * target against the route actually rendered right now.
+   */
+  const toast = app.runWithContext(() => useToast())
+  bus.on('remote:failed', ({ name, reason }) => {
+    if (router.currentRoute.value.name === `remote-unavailable-${name}`) return
+    toast.show({
+      title: `${name} is unavailable`,
+      description: reason,
+      variant: 'danger',
+    })
+  })
 
   /* Now that the app is mounted and any remote's `register()` has had the
      chance to subscribe, publish each boot-time failure. */
