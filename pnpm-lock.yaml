@@ -119,6 +119,9 @@ importers:
       '@sentra/plugin-analytics':
         specifier: workspace:*
         version: link:../../packages/plugin-analytics
+      '@sentra/result':
+        specifier: workspace:*
+        version: link:../../packages/result
       '@sentra/shell-contract':
         specifier: workspace:*
         version: link:../../packages/shell-contract

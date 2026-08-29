@@ -32,5 +32,12 @@ export default defineConfig({
   /* Required by the sourcemap CI check, and by any useful production trace. */
   build: { outDir: 'dist', sourcemap: true },
   server: { port: 5174, strictPort: true },
-  preview: { port: 4174, strictPort: true },
+  /* `cors: true` is a local-preview convenience: the shell (port 4175) fetches
+     this remote's `remoteEntry.js` cross-origin, and without an
+     `Access-Control-Allow-Origin` header the browser blocks the script
+     outright — `loadRemote` then rejects, and the boundary works but the
+     remote is permanently down. A real deployment allow-lists the host's
+     origin explicitly rather than reflecting `*`. Named risk area: access
+     control. */
+  preview: { port: 4174, strictPort: true, cors: true },
 })

@@ -16,6 +16,7 @@
   "dependencies": {
     "@module-federation/runtime": "2.9.0",
     "@sentra/plugin-analytics": "workspace:*",
+    "@sentra/result": "workspace:*",
     "@sentra/shell-contract": "workspace:*",
     "@sentra/tokens": "workspace:*",
     "@sentra/ui": "workspace:*",
