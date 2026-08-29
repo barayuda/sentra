@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@graphql-typed-document-node/core": "3.2.0",
+    "@sentra/result": "workspace:*",
     "dompurify": "3.4.14"
   },
   "devDependencies": {
