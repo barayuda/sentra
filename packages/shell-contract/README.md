@@ -1,5 +1,7 @@
 # @sentra/shell-contract
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it does
 
 The contract between `apps/shell` and every remote it can mount — currently

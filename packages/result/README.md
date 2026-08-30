@@ -1,5 +1,7 @@
 # @sentra/result
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it does
 
 `Result<T, E>` — a discriminated union for an operation that is expected to fail

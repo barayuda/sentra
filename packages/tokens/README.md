@@ -1,5 +1,7 @@
 # @sentra/tokens
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it does
 
 Holds the design tokens as a typed TypeScript object and **generates** CSS from them. The

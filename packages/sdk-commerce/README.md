@@ -1,5 +1,7 @@
 # @sentra/sdk-commerce
 
+**Role:** reference implementation — safe to delete. See [the removal procedure](../../docs/proposal/README.md#adopting-it).
+
 ## What it is
 
 A typed Shopify Storefront client, mock-first. It talks GraphQL to Shopify's Storefront

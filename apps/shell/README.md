@@ -1,5 +1,7 @@
 # @sentra/shell
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it is
 
 The host application: it owns the only Vue app instance, the only `vue-router`

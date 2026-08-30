@@ -46,7 +46,8 @@
   },
   "sentra": {
     "referenceDocs": [
-      "docs/prd-feasibility"
+      "docs/prd-feasibility",
+      "docs/adr/0003-vendored-schema-and-mock-first-commerce.md"
     ],
     "referenceConfigs": [
       "lighthouserc.reference.json"

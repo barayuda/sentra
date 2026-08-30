@@ -1,5 +1,7 @@
 # @sentra/config
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it does
 
 Holds the tool configuration every Sentra package inherits, so rules are defined once

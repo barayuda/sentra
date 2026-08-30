@@ -1,5 +1,7 @@
 # @sentra/storefront
 
+**Role:** reference implementation — safe to delete. See [the removal procedure](../../docs/proposal/README.md#adopting-it).
+
 ## Running it
 
 ```bash

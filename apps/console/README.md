@@ -1,5 +1,7 @@
 # @sentra/console
 
+**Role:** reference implementation — safe to delete. See [the removal procedure](../../docs/proposal/README.md#adopting-it).
+
 ## What it is
 
 The ops console: an orders table and feature-flag toggles, built on `@sentra/sdk-ops`.

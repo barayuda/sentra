@@ -1,5 +1,7 @@
 # @sentra/ui
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it does
 
 Vue 3 component library for Sentra. Ten components, each with a documented accessibility
