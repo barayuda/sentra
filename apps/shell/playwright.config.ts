@@ -66,9 +66,19 @@ export default defineConfig({
            * worker and the `?break=<name>` control read in `registry/boot.ts`.
            * Without the flag on this build, `?break=` silently does nothing and
            * every deliberate-failure test would pass against a healthy remote.
+           *
+           * Ruling PF-12 makes a missing digest fatal in a production build, and
+           * this suite serves a production build, so the manifest must be hashed
+           * before it is served — build, hash, then preview, matching what an
+           * adopter's CD pipeline does. The other two `webServer` entries above
+           * already build storefront and console, but Playwright starts all
+           * three commands in parallel with no ordering guarantee, so hashing a
+           * `dist/` that may not exist yet would be a race — they are rebuilt
+           * here too, at a turbo cache hit, so this command alone is guaranteed
+           * to run after both remotes are actually on disk.
            */
           command:
-            'VITE_SENTRA_MOCKS=true pnpm --filter @sentra/shell build && pnpm --filter @sentra/shell preview --port 4175 --strictPort --host 127.0.0.1',
+            'VITE_SENTRA_MOCKS=true pnpm --filter @sentra/storefront build && VITE_SENTRA_MOCKS=true pnpm --filter @sentra/console build && VITE_SENTRA_MOCKS=true pnpm --filter @sentra/shell build && node ../../scripts/hash-remotes.mjs && pnpm --filter @sentra/shell preview --port 4175 --strictPort --host 127.0.0.1',
           url: 'http://127.0.0.1:4175',
           reuseExistingServer: !process.env.CI,
           timeout: 180_000,
