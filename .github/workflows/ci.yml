@@ -149,8 +149,13 @@ jobs:
       # sdk-commerce's build step generates the types the app imports, so the
       # workspace build must run before the app can be built by Playwright's
       # webServer command.
+      #
+      # VITE_SENTRA_MOCKS is set here, not in the Playwright webServer command,
+      # so the build happens exactly once per job. It is declared in
+      # turbo.json's `build` task env, without which Turborepo's strict
+      # environment mode would drop it before Vite ever saw it.
       - name: Build workspace packages
-        run: pnpm build
+        run: VITE_SENTRA_MOCKS=true pnpm build
 
       - name: Run E2E smoke tests
         run: pnpm --filter @sentra/storefront e2e
@@ -192,8 +197,13 @@ jobs:
       # sdk-commerce generates types at build time and the shell's E2E config
       # builds all three apps itself, so the workspace packages must exist
       # first — same ordering constraint as the storefront's e2e job.
+      #
+      # VITE_SENTRA_MOCKS is set here, not in the Playwright webServer command,
+      # so the build happens exactly once per job. It is declared in
+      # turbo.json's `build` task env, without which Turborepo's strict
+      # environment mode would drop it before Vite ever saw it.
       - name: Build workspace packages
-        run: pnpm build
+        run: VITE_SENTRA_MOCKS=true pnpm build
 
       - name: Run federated E2E tests
         run: pnpm --filter @sentra/shell e2e
