@@ -61,13 +61,46 @@ export function matchBudget(file, budgets) {
 const TOTAL_BUDGETS = { '$total:js': '.js', '$total:css': '.css' }
 
 /**
+ * Budget keys that are read as totals rather than as glob patterns.
+ *
+ * Reserving the `$` prefix stops `matchBudget` treating these as globs, but a
+ * reservation alone leaves a gap: a key that is `$`-prefixed and *not* in this
+ * set matches no glob, trips no guard, and is compared against nothing. It
+ * reads as coverage in the budgets file while checking nothing at all. Any
+ * unrecognised `$` key is therefore a hard failure — this set is derived from
+ * `TOTAL_BUDGETS` above rather than listed again, so the two can never drift.
+ */
+const TOTAL_KEYS = new Set(Object.keys(TOTAL_BUDGETS))
+
+/**
+ * Flags `$`-prefixed budget keys that are not a recognised total.
+ *
+ * This must be checked independently of `evaluate`, and can never be folded
+ * into the "matched no file" guards below: those guards only run once a real
+ * measurement set exists, but a typo'd key is wrong in the budgets file
+ * itself, not in the build, so it must be caught even for an app that is
+ * absent or unbuilt (see the call in `main`, made before the classify skip).
+ *
+ * @param {Record<string, number>} budgets - An app's budget object.
+ * @returns {string[]} One message per unrecognised `$`-prefixed key.
+ */
+export function unknownBudgetKeyFailures(budgets) {
+  const permitted = [...TOTAL_KEYS].join(', ')
+  return Object.keys(budgets)
+    .filter((key) => key.startsWith('$') && !TOTAL_KEYS.has(key))
+    .map((key) => `unknown reserved budget key "${key}" — permitted keys are ${permitted}`)
+}
+
+/**
  * Compares measurements against budgets.
  *
  * Two kinds of budget are checked: per-file glob patterns (unchanged from the
  * original gate) and per-app aggregate totals under `$total:js` / `$total:css`
  * (see `TOTAL_BUDGETS`). The totals exist because most of a bundle's weight
  * lives in bundler-generated chunk names no glob can name stably — a total is
- * rename-proof where a pattern is not.
+ * rename-proof where a pattern is not. An unrecognised `$`-prefixed key (see
+ * `unknownBudgetKeyFailures`) is reported here too, so an app that is present
+ * gets the check without a caller having to remember to run it separately.
  *
  * @param {Array<{file: string, bytes: number}>} measurements - Measured files.
  * @param {Record<string, number>} budgets - Pattern (or `$total:*` key) to max gzipped bytes.
@@ -75,7 +108,7 @@ const TOTAL_BUDGETS = { '$total:js': '.js', '$total:css': '.css' }
  */
 export function evaluate(measurements, budgets) {
   const rows = []
-  const failures = []
+  const failures = [...unknownBudgetKeyFailures(budgets)]
   const matched = new Set()
 
   for (const measurement of measurements) {
@@ -207,6 +240,15 @@ async function main() {
 
   for (const [app, budgets] of Object.entries(config.apps)) {
     const presence = await classify(app)
+
+    /* A typo'd reserved key is wrong in the budgets file, not in the build, so
+       it must be caught whether or not this app was built or even exists —
+       hence this runs before either skip below, not inside the `present`
+       branch where `evaluate` otherwise catches it. */
+    if (presence !== 'present') {
+      allFailures.push(...unknownBudgetKeyFailures(budgets).map((failure) => `${app}: ${failure}`))
+    }
+
     if (presence === 'absent') {
       console.log(`\n${app}\n  skipped — directory not present in this tree`)
       continue
