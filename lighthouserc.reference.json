@@ -1,5 +1,5 @@
 {
-  "$comment": "Reference budget: audits apps/storefront, which scripts/strip-reference.mjs deletes. This file leaves with it — see sentra.referenceConfigs in the root package.json.",
+  "$comment": "Reference budget: audits apps/storefront, which scripts/strip-reference.mjs deletes. This file leaves with it — see sentra.referenceConfigs in the root package.json. Same maxNumericValue-only limitation as lighthouserc.json's $comment: this file cannot assert a resource floor (@lhci/cli 0.15.1 has no minNumericValue), so an empty apps/storefront/dist would pass every assertion here. verify:bundle-size's apps/storefront entry in bundle-budgets.json is what actually catches that.",
   "ci": {
     "collect": {
       "numberOfRuns": 3,
