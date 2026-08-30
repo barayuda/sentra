@@ -50,6 +50,9 @@ jobs:
       - name: Check bundle sizes
         run: pnpm verify:bundle-size
 
+      - name: Audit dependencies
+        run: pnpm verify:audit
+
       - name: Typecheck
         run: pnpm typecheck
 

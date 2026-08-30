@@ -1,0 +1,5 @@
+{
+  "$schema": "./allowlist.schema.md",
+  "$comment": "Advisories consciously accepted, each with a deadline. See security/README.md. Ships empty on purpose — entries appear only when pnpm audit actually reports something.",
+  "accepted": []
+}

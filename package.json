@@ -18,7 +18,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify:sourcemaps": "node scripts/check-sourcemaps.mjs",
-    "verify:bundle-size": "node scripts/check-bundle-size.mjs"
+    "verify:bundle-size": "node scripts/check-bundle-size.mjs",
+    "verify:audit": "node scripts/check-audit.mjs"
   },
   "devDependencies": {
     "eslint": "10.9.1",
