@@ -50,9 +50,22 @@ test('the platform-only shell boots with no console or page errors', async ({ pa
      `scripts/strip-reference.mjs` prunes `remotes.json` to `[]`, so the
      shell's documented empty-manifest path (`registry/boot.ts`, rendering
      `@sentra/ui`'s `RemoteUnavailable`) is what a healthy stripped build is
-     expected to show. */
-  await expect(page.getByRole('heading', { name: 'The platform is unavailable' })).toBeVisible()
+     expected to show.
+     A module-resolution failure fires asynchronously — the mock worker's
+     dynamic import rejects after the page has already loaded, not during
+     initial script parse — so it is not guaranteed to be in `errors` the
+     instant `goto` resolves. The `toBeVisible` poll below gives it time to
+     arrive; the `catch` turns a bare "element not found" timeout into a
+     failure that names the specifier the browser actually failed on. */
+  try {
+    await expect(page.getByRole('heading', { name: 'The platform is unavailable' })).toBeVisible()
+  } catch (cause) {
+    throw new Error(
+      `platform chrome did not render; captured console/page errors: ${JSON.stringify(errors)}`,
+      { cause },
+    )
+  }
   await expect(page.getByText('No remotes are registered in remotes.json.')).toBeVisible()
 
-  expect(errors).toEqual([])
+  expect(errors, 'unexpected console/page errors').toEqual([])
 })
