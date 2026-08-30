@@ -68,6 +68,16 @@ through the tree:
 
 Storybook's Theme and Density toolbars set these same two attributes on
 `document.documentElement`, which is why every story restyles live when you toggle them.
+The preview canvas is painted from `--color-neutral-50` in the same decorator, so it
+follows the toolbar too — otherwise a dark-mode story rendered on a white page, a state no
+real application can produce.
+
+The Storybook chrome around those stories is branded in `.storybook/manager.ts`, which
+reads its accent and radius from `@sentra/tokens` rather than repeating hex literals: the
+documentation of a brand should not be the one surface that keeps showing the old one. It
+follows the reader's `prefers-color-scheme`, independently of the Theme toolbar, because
+the two answer different questions — which shell you want to sit in, and which theme you
+are inspecting.
 
 ### Motion
 

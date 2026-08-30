@@ -55,6 +55,19 @@ const preview: Preview = {
     (_story: unknown, context: { globals: { theme: string; density: string } }) => {
       document.documentElement.setAttribute('data-theme', context.globals.theme)
       document.documentElement.setAttribute('data-density', context.globals.density)
+      /*
+       * Paint the canvas from the same tokens the story uses. Storybook's own
+       * preview background belongs to the manager theme, not to this document,
+       * so without these two lines the canvas stayed the manager's colour while
+       * the components on it switched — a dark-mode story rendered on white,
+       * which is not a state any application can produce and so documents a
+       * component nobody will ever see.
+       *
+       * These are `var()` references, not resolved values: the attribute above
+       * decides what they mean, so one assignment covers both themes.
+       */
+      document.body.style.background = 'var(--color-neutral-50)'
+      document.body.style.color = 'var(--color-neutral-900)'
       return { template: '<story/>' }
     },
   ],

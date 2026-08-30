@@ -1,6 +1,12 @@
-# Sentra
+<p align="center">
+  <img src="docs/assets/sentra-mark.png" alt="" width="112" height="112" />
+</p>
 
-[![CI](https://github.com/barayuda/sentra/actions/workflows/ci.yml/badge.svg)](https://github.com/barayuda/sentra/actions/workflows/ci.yml)
+<h1 align="center">Sentra</h1>
+
+<p align="center">
+  <a href="https://github.com/barayuda/sentra/actions/workflows/ci.yml"><img src="https://github.com/barayuda/sentra/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+</p>
 
 Sentra is a template: a base platform for building a federated Vue 3 front end, plus a
 working reference implementation (a storefront and an internal ops console) that proves
