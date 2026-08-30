@@ -62,8 +62,8 @@ confirm every member still declares a valid role.
 
 The host, `apps/shell`, is the only application a browser loads directly and the only
 place a router or a `history` object lives; `apps/storefront` and `apps/console` are
-Module Federation remotes composed into it at runtime. Three decisions make that
-composition work, each recorded where it was made rather than restated here:
+Module Federation remotes composed into it at runtime. The decisions that make that
+composition work are each recorded where they were made rather than restated here:
 
 - **Why Module Federation, and what M4 left open** —
   [ADR 0001](../adr/0001-federation-plugin-choice.md).
@@ -77,7 +77,7 @@ composition work, each recorded where it was made rather than restated here:
   typed event bus (`ShellBus`) rather than direct imports, so the shell never depends on a
   remote's internals — [ADR 0006](../adr/0006-cross-remote-communication.md).
 
-`@sentra/shell-contract` is the typed spine underneath all four decisions: the
+`@sentra/shell-contract` is the typed spine underneath all of them: the
 `RemoteModule` interface a remote registers, the `ShellBus` event map, and the manifest
 schema the shell validates `remotes.json` against before trusting anything in it. It is a
 platform member, not a reference one, because every adopter needs the contract regardless

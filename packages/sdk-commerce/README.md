@@ -142,7 +142,7 @@ a reviewer seeing a deliberate suppression.
 ## Mocks
 
 `@sentra/sdk-commerce/mocks` is a public subpath, not a test-only helper, because the same
-MSW handlers serve three consumers: this package's own contract tests
+MSW handlers serve every consumer: this package's own contract tests
 (`src/mocks/contract.test.ts`), the storefront's dev server, and the storefront's demo
 build. One fixture set means the demo cannot drift from what the tests prove.
 

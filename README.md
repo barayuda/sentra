@@ -76,7 +76,7 @@ pnpm --filter @sentra/storefront dev
 
 ## Applications
 
-Three containers, one federation boundary. The shell is the only one a browser loads
+Separate containers, one federation boundary. The shell is the only one a browser loads
 directly; the other two are also loadable standalone, for their own dev loop and their own
 end-to-end suite.
 

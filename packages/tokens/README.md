@@ -8,7 +8,7 @@ Holds the design tokens as a typed TypeScript object and **generates** CSS from 
 generation step is the point: a token is edited in one place, and both the CSS custom
 properties and the Tailwind utility classes follow from that edit.
 
-Output is one file, `dist/tokens.css`. The light-mode values render as two blocks:
+Output is one file, `dist/tokens.css`. The light-mode values render as separate blocks:
 
 - `@theme` — tokens in a namespace Tailwind recognises (`color`, `spacing`, `radius`,
   and so on). Tailwind derives utility classes from these, so `--color-brand-600`

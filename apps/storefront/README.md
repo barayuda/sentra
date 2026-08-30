@@ -60,7 +60,7 @@ does the same. Then boot the shell (`apps/shell/README.md`), which fetches
 `http://127.0.0.1:4173/remoteEntry.js` per `apps/shell/public/remotes.json` and mounts
 this app's routes under `/shop`.
 
-Two things change under the shell, and nothing else does:
+What changes under the shell, and nothing else does:
 
 - **The header.** `apps/shell/src/components/ShellHeader.vue` owns navigation and the
   cart badge when this app runs under the shell; `AppHeader.vue` above still owns the

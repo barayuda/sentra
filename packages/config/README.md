@@ -5,7 +5,7 @@
 ## What it does
 
 Holds the tool configuration every Sentra package inherits, so rules are defined once
-rather than copied per package. Two things ship here: a base `tsconfig` and a Vitest
+rather than copied per package. What ships here: a base `tsconfig` and a Vitest
 config factory.
 
 ## How to use it
