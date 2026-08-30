@@ -162,6 +162,54 @@ describe('CartDrawer', () => {
     await vi.waitFor(() => expect(emitted()['update:modelValue']).toBeTruthy())
   })
 
+  /**
+   * This component is named for a drawer, and `Dialog` renders a centred
+   * modal unless asked otherwise. Without this assertion, dropping the
+   * `placement` prop would restore the modal silently — the cart would still
+   * open, still hold focus, and still pass every other test in this file.
+   */
+  it('opens as an edge-anchored drawer rather than a centred modal', async () => {
+    const { findByRole } = await renderDrawer()
+    const panel = await findByRole('dialog')
+    expect(panel.className).toContain('h-full')
+    expect(panel.parentElement?.className).toContain('justify-end')
+  })
+
+  /**
+   * The lines scroll; the summary must not scroll with them. Asserting that
+   * the subtotal sits outside the scrolling body is what distinguishes a
+   * pinned footer from a summary that merely happens to render last — the
+   * latter looks identical in a one-line cart and disappears below the fold
+   * in a thirty-line one.
+   */
+  it('pins the subtotal and checkout outside the scrolling line list', async () => {
+    const { findByTestId } = await renderDrawer()
+    const body = await findByTestId('dialog-body')
+    const footer = await findByTestId('dialog-footer')
+    const subtotal = await findByTestId('cart-subtotal')
+
+    expect(body.textContent).toContain('Stoneware Mug No. 1')
+    expect(body.contains(subtotal)).toBe(false)
+    expect(footer.contains(subtotal)).toBe(true)
+  })
+
+  it('renders no summary bar for an empty cart', async () => {
+    /* An empty drawer showing a $0 subtotal above a dead checkout button is
+       worse than showing neither, so the footer stays blank rather than
+       rendering a border and a zero. */
+    setActivePinia(createPinia())
+    setStorefrontClient({} as StorefrontClient)
+    const { findByTestId, queryByTestId } = render(CartDrawer, {
+      props: { modelValue: true },
+      global: {
+        provide: { [ANALYTICS_INJECTION_KEY as unknown as string]: recordingAnalytics() },
+      },
+    })
+    await findByTestId('cart-empty')
+    expect(queryByTestId('cart-subtotal')).toBeNull()
+    expect((await findByTestId('dialog-footer')).textContent?.trim()).toBe('')
+  })
+
   it('shows a failure message without discarding the cart', async () => {
     const { findByRole, findByText } = await renderDrawer({
       updateCartLines: vi.fn(async () => ({
