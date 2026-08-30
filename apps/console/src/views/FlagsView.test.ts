@@ -109,4 +109,73 @@ describe('FlagsView', () => {
 
     expect(await screen.findByText(/locked by policy/i)).toBeTruthy()
   })
+
+  it('offers a retry control when loading fails, and the retry really re-requests', async () => {
+    /* Fails once, then succeeds — so the assertion is that retry actually
+       re-requests, not merely that a button exists. */
+    const listFlags = vi
+      .fn<OpsClient['listFlags']>()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { kind: 'network', message: 'offline', status: null },
+      })
+      .mockResolvedValueOnce({ ok: true, value: [{ ...FLAG, key: 'alpha', label: 'Alpha' }] })
+
+    renderView(clientWith({ listFlags }))
+
+    const retry = await screen.findByRole('button', { name: /retry/i })
+    retry.click()
+
+    /* Waiting on the *new* row is what proves the second response was
+       rendered; a call-count assertion alone would pass even if the view
+       re-requested and then discarded the answer. */
+    expect(await screen.findByText('Alpha')).toBeTruthy()
+    expect(listFlags).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('shows an empty state, distinct from the loading state, when there are no flags', async () => {
+    renderView(
+      clientWith({
+        listFlags: vi.fn<OpsClient['listFlags']>(async () => ({ ok: true, value: [] })),
+      }),
+    )
+
+    expect((await screen.findByTestId('flags-empty')).textContent).toContain('No feature flags')
+    expect(screen.queryByTestId('flags-loading')).toBeNull()
+  })
+
+  it('shows the loading state, and not the empty state, while the request is in flight', async () => {
+    let release: (result: Awaited<ReturnType<OpsClient['listFlags']>>) => void = () => undefined
+    const listFlags = vi.fn<OpsClient['listFlags']>(
+      () =>
+        new Promise<Awaited<ReturnType<OpsClient['listFlags']>>>((resolve) => {
+          release = resolve
+        }),
+    )
+
+    renderView(clientWith({ listFlags }))
+
+    expect(await screen.findByTestId('flags-loading')).toBeTruthy()
+    expect(screen.queryByTestId('flags-empty')).toBeNull()
+
+    release({ ok: true, value: [] })
+
+    expect(await screen.findByTestId('flags-empty')).toBeTruthy()
+    expect(screen.queryByTestId('flags-loading')).toBeNull()
+  })
+
+  it('does not show the empty state while an error is showing', async () => {
+    renderView(
+      clientWith({
+        listFlags: vi.fn<OpsClient['listFlags']>(async () => ({
+          ok: false,
+          error: { kind: 'network', message: 'offline', status: null },
+        })),
+      }),
+    )
+
+    expect((await screen.findByRole('alert')).textContent).toContain('offline')
+    expect(screen.queryByTestId('flags-empty')).toBeNull()
+  })
 })
