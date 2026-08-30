@@ -96,4 +96,91 @@ describe('Dialog', () => {
     expect(panel.className).toContain('z-[var(--z-index-modal)]')
     expect(panel.parentElement?.className).toContain('z-[var(--z-index-overlay)]')
   })
+
+  describe('placement', () => {
+    it('centres the panel by default', async () => {
+      render(Dialog, { props: baseProps })
+      await nextTick()
+      const panel = screen.getByRole('dialog')
+      expect(panel.parentElement?.className).toContain('items-center')
+      expect(panel.parentElement?.className).toContain('justify-center')
+      expect(panel.className).toContain('rounded-lg')
+      expect(panel.className).not.toContain('h-full')
+    })
+
+    it('anchors the panel to the inline end as a full-height drawer', async () => {
+      render(Dialog, { props: { ...baseProps, placement: 'end' } })
+      await nextTick()
+      const panel = screen.getByRole('dialog')
+      expect(panel.parentElement?.className).toContain('justify-end')
+      expect(panel.parentElement?.className).toContain('items-stretch')
+      /* Square against the viewport edge, and full height — the two things
+         that make it read as a drawer rather than an off-centre modal. */
+      expect(panel.className).toContain('h-full')
+      expect(panel.className).not.toContain('rounded-lg')
+    })
+
+    it('keeps the modal contract when placed as a drawer', async () => {
+      /* Placement is presentation only. A drawer that quietly dropped the
+         focus trap, the scroll lock, or the ARIA wiring would defeat the
+         reason this component is reused instead of hand-rolled — so assert
+         the contract on the branch that changes, not only on the default. */
+      render(Dialog, {
+        props: { ...baseProps, placement: 'end' },
+        slots: { footer: '<button>Confirm</button>' },
+      })
+      await nextTick()
+      await nextTick()
+      const dialog = screen.getByRole('dialog')
+      expect(dialog.getAttribute('aria-modal')).toBe('true')
+      const labelledBy = dialog.getAttribute('aria-labelledby')
+      expect(document.getElementById(labelledBy as string)?.textContent).toBe('Confirm removal')
+      expect(document.body.style.overflow).toBe('hidden')
+      expect(dialog.contains(document.activeElement)).toBe(true)
+    })
+
+    it('scrolls the body and pins the footer when placed as a drawer', async () => {
+      /* The reason overflow lives on the body rather than the panel: with a
+         panel-level scroll, a long list pushes the footer past the bottom of
+         the viewport. Assert the split — panel is a column that does not
+         scroll, body scrolls, footer sits outside the scrolling region. */
+      render(Dialog, {
+        props: { ...baseProps, placement: 'end' },
+        slots: { default: 'Body content', footer: '<button>Confirm</button>' },
+      })
+      await nextTick()
+      const panel = screen.getByRole('dialog')
+      const body = screen.getByTestId('dialog-body')
+      const footer = screen.getByTestId('dialog-footer')
+
+      expect(panel.className).toContain('flex-col')
+      expect(panel.className).not.toContain('overflow-y-auto')
+      expect(body.className).toContain('overflow-y-auto')
+      expect(body.className).toContain('flex-1')
+      /* Without min-h-0 a flex child cannot shrink below its content, so the
+         column outgrows the panel and the overflow above never engages. */
+      expect(body.className).toContain('min-h-0')
+      expect(body.contains(footer)).toBe(false)
+      expect(footer.textContent).toContain('Confirm')
+    })
+
+    it('keeps the centred placement unscrolled with a trailing-aligned footer', async () => {
+      render(Dialog, {
+        props: baseProps,
+        slots: { default: 'Body content', footer: '<button>Confirm</button>' },
+      })
+      await nextTick()
+      const body = screen.getByTestId('dialog-body')
+      /* A modal is sized by its content: nothing to pin, nothing to scroll. */
+      expect(body.className).not.toContain('overflow-y-auto')
+      expect(screen.getByTestId('dialog-footer').className).toContain('justify-end')
+    })
+
+    it('closes on overlay click when placed as a drawer', async () => {
+      const { emitted } = render(Dialog, { props: { ...baseProps, placement: 'end' } })
+      await nextTick()
+      await fireEvent.click(screen.getByTestId('dialog-overlay'))
+      expect(emitted('update:modelValue')).toEqual([[false]])
+    })
+  })
 })

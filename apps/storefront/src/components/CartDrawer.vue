@@ -7,12 +7,21 @@ import { errorCopy } from '../lib/errorCopy.ts'
 import { useCartStore } from '../stores/cart.ts'
 
 /**
- * Cart contents over `Dialog`.
+ * Cart contents in an edge-anchored drawer, built on `Dialog`'s `end`
+ * placement.
  *
  * Built on the design system's dialog rather than a bespoke drawer so it
  * inherits the focus trap, scroll lock, Escape handling, and ARIA wiring that
  * component already proves in Storybook — the reuse the component library
- * exists to make possible.
+ * exists to make possible. `Dialog` originally offered only a centred modal,
+ * so this component rendered as one despite its name; the placement prop
+ * exists so the reuse no longer costs the shape the cart actually wants.
+ *
+ * Lines go in the body, which scrolls; the subtotal and checkout go in the
+ * footer, which the drawer pins to the bottom. That split is the point of
+ * using the footer slot at all — with everything in one scrolling column the
+ * checkout button sinks below the fold once the cart holds more lines than
+ * fit the viewport, which is precisely when a customer most wants it.
  *
  * Quantity controls are buttons rather than a number input on purpose: `Input`
  * has no `number` type, and a stepper communicates the available actions
@@ -49,6 +58,7 @@ async function remove(lineId: string, quantity: number): Promise<void> {
   <Dialog
     :model-value="modelValue"
     title="Your cart"
+    placement="end"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <!--
@@ -65,92 +75,103 @@ async function remove(lineId: string, quantity: number): Promise<void> {
       <p class="mt-1 text-sm text-neutral-500">Add something from the collection to get started.</p>
     </div>
 
-    <div v-else class="flex flex-col gap-4">
+    <ul v-else class="flex flex-col gap-4">
       <!-- If this ever becomes a per-line disable instead of the global
            `cart.loading`, the store's generation guard (added for the exact
            same superseded-write race) is what keeps concurrent mutations safe —
            don't remove one without the other. -->
-      <ul class="flex flex-col gap-4">
-        <li v-for="line in cart.lines" :key="line.id" class="flex gap-3">
-          <img
-            v-if="line.image"
-            :src="shopifyImageUrl(line.image.url, { width: 96, height: 96, crop: 'center' })"
-            :alt="line.image.altText ?? line.productTitle"
-            class="size-16 rounded bg-neutral-100 object-cover"
-            width="64"
-            height="64"
-          />
-          <div v-else class="size-16 rounded bg-neutral-100" aria-hidden="true" />
+      <li v-for="line in cart.lines" :key="line.id" class="flex gap-3">
+        <img
+          v-if="line.image"
+          :src="shopifyImageUrl(line.image.url, { width: 96, height: 96, crop: 'center' })"
+          :alt="line.image.altText ?? line.productTitle"
+          class="size-16 rounded bg-neutral-100 object-cover"
+          width="64"
+          height="64"
+        />
+        <div v-else class="size-16 rounded bg-neutral-100" aria-hidden="true" />
 
-          <div class="flex-1">
-            <p class="text-sm font-medium text-neutral-900">{{ line.productTitle }}</p>
-            <p class="text-xs text-neutral-500">{{ line.variantTitle }}</p>
-            <p class="mt-1 text-sm text-neutral-700">
-              <Money :amount="line.price.amount" :currency="line.price.currencyCode" />
-            </p>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-neutral-900">{{ line.productTitle }}</p>
+          <p class="text-xs text-neutral-500">{{ line.variantTitle }}</p>
+          <p class="mt-1 text-sm text-neutral-700">
+            <Money :amount="line.price.amount" :currency="line.price.currencyCode" />
+          </p>
 
-            <div class="mt-2 flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                :disabled="cart.loading"
-                :aria-label="`Decrease quantity of ${line.productTitle}`"
-                @click="adjust(line.id, line.quantity - 1)"
-              >
-                −
-              </Button>
-              <span class="min-w-6 text-center text-sm text-neutral-900" aria-live="polite">
-                {{ line.quantity }}
-              </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                :disabled="cart.loading"
-                :aria-label="`Increase quantity of ${line.productTitle}`"
-                @click="adjust(line.id, line.quantity + 1)"
-              >
-                +
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                :disabled="cart.loading"
-                :aria-label="`Remove ${line.productTitle} from cart`"
-                @click="remove(line.id, line.quantity)"
-              >
-                Remove
-              </Button>
-            </div>
+          <div class="mt-2 flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              :disabled="cart.loading"
+              :aria-label="`Decrease quantity of ${line.productTitle}`"
+              @click="adjust(line.id, line.quantity - 1)"
+            >
+              −
+            </Button>
+            <span class="min-w-6 text-center text-sm text-neutral-900" aria-live="polite">
+              {{ line.quantity }}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              :disabled="cart.loading"
+              :aria-label="`Increase quantity of ${line.productTitle}`"
+              @click="adjust(line.id, line.quantity + 1)"
+            >
+              +
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              :disabled="cart.loading"
+              :aria-label="`Remove ${line.productTitle} from cart`"
+              @click="remove(line.id, line.quantity)"
+            >
+              Remove
+            </Button>
           </div>
-        </li>
-      </ul>
+        </div>
+      </li>
+    </ul>
 
-      <div class="flex items-center justify-between border-t border-neutral-200 pt-3">
-        <span class="text-sm text-neutral-700">Subtotal</span>
-        <span data-testid="cart-subtotal" class="text-sm font-semibold text-neutral-900">
-          <Money
-            v-if="cart.subtotal"
-            :amount="cart.subtotal.amount"
-            :currency="cart.subtotal.currencyCode"
-          />
-        </span>
-      </div>
+    <!--
+      The summary goes in `Dialog`'s footer slot, which the `end` placement
+      pins below the scrolling body. Keeping it here rather than after the
+      line list is what makes checkout reachable without scrolling a long
+      cart to the bottom first.
 
-      <!--
-        Checkout is a plain anchor to Shopify's hosted checkout, not a fetch.
-        Payment belongs on Shopify's PCI-compliant origin; routing it through
-        this application would put us in scope for card data we have no business
-        touching. `rel="noopener noreferrer"` because it opens a new context.
-      -->
-      <a
-        v-if="cart.checkoutUrl"
-        :href="cart.checkoutUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center justify-center rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-neutral-0 no-underline hover:bg-brand-700"
-      >
-        Checkout
-      </a>
-    </div>
+      It renders only for a non-empty cart: an empty drawer showing a $0
+      subtotal above a dead checkout button is worse than showing neither.
+    -->
+    <template #footer>
+      <template v-if="!cart.isEmpty">
+        <div class="flex items-center justify-between border-t border-neutral-200 pt-3">
+          <span class="text-sm text-neutral-700">Subtotal</span>
+          <span data-testid="cart-subtotal" class="text-sm font-semibold text-neutral-900">
+            <Money
+              v-if="cart.subtotal"
+              :amount="cart.subtotal.amount"
+              :currency="cart.subtotal.currencyCode"
+            />
+          </span>
+        </div>
+
+        <!--
+          Checkout is a plain anchor to Shopify's hosted checkout, not a fetch.
+          Payment belongs on Shopify's PCI-compliant origin; routing it through
+          this application would put us in scope for card data we have no business
+          touching. `rel="noopener noreferrer"` because it opens a new context.
+        -->
+        <a
+          v-if="cart.checkoutUrl"
+          :href="cart.checkoutUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center justify-center rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-neutral-0 no-underline hover:bg-brand-700"
+        >
+          Checkout
+        </a>
+      </template>
+    </template>
   </Dialog>
 </template>
