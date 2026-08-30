@@ -147,7 +147,7 @@ MSW handlers serve three consumers: this package's own contract tests
 build. One fixture set means the demo cannot drift from what the tests prove.
 
 `createMockControl()` returns a mutable `{ scenario, latencyMs }` object passed to
-`createStorefrontHandlers`. Five scenarios:
+`createStorefrontHandlers`. The scenarios:
 
 | `scenario`       | Produces                                                                      |
 | ---------------- | ----------------------------------------------------------------------------- |

@@ -166,7 +166,7 @@ records how every CI gate's pass/fail boundary was chosen.
 | `pnpm --filter @sentra/shell e2e`               | Federated Playwright suite — builds and serves every app, drives the shell       |
 | `pnpm --filter @sentra/shell e2e:platform-only` | Playwright smoke suite against the stripped, platform-only build                 |
 
-CI runs six jobs on every push and pull request: `verify` (format, lint, build, typecheck,
+CI runs these jobs on every push and pull request: `verify` (format, lint, build, typecheck,
 test, the `tokens` Jest suite, and the Storybook build), `interactions` (Storybook's play
 functions and a11y checks in a real browser), `e2e` (the Playwright suite against the built
 storefront alone), `federation-e2e` (the Playwright suite against all three built apps

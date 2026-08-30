@@ -205,6 +205,20 @@ proved it — but the episode is the same defect class appearing inside a planni
 not only inside code, and is recorded here rather than quietly corrected out of the
 record.
 
+One more limitation belongs in this section even though it guards no CI gate: the
+no-numbers-in-prose rule that keeps this document's own claims from going stale (see the
+opening paragraph above) is enforced by review and by a hand-run sweep —
+`rtk proxy grep -rniE "\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|[0-9]{1,4}) [a-z]+s\b" README.md docs/proposal packages/*/README.md apps/*/README.md`
+— not by anything CI checks. The sweep's matches are noisy by construction: a number
+followed by a plural word catches both an inventory assertion that goes stale the moment a
+repository artifact is added or removed, and ordinary prose that states a logical structure
+or refers back to something just named — "two things are both true," "these same two
+attributes." Separating the two requires reading each match in its sentence; there is no
+pattern that keeps the first kind and drops the second without an allowlist, and an
+allowlist built to suppress legitimate prose is more machinery than a documentation rule is
+worth today. So this rule holds only as long as a reviewer keeps applying it — nothing in
+CI fails if it lapses.
+
 ## Adopting it
 
 Clone the repository, then decide whether you want the reference implementation at all.

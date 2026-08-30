@@ -79,7 +79,7 @@ origin rather than reflecting every origin that asks. Named risk area: access co
 
 ## Architecture
 
-Two routes (`src/router.ts`):
+The routes (`src/router.ts`):
 
 | Path                | Name         | View                 |
 | ------------------- | ------------ | -------------------- |
