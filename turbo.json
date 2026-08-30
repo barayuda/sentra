@@ -3,7 +3,8 @@
   "globalDependencies": [
     "security/csp-sources.json",
     "scripts/csp.mjs",
-    "scripts/generate-csp.mjs"
+    "scripts/generate-csp.mjs",
+    "scripts/hash-remotes.mjs"
   ],
   "tasks": {
     "build": {
