@@ -2,6 +2,9 @@
   "name": "@sentra/shell",
   "version": "0.0.0",
   "private": true,
+  "sentra": {
+    "role": "platform"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --port 5175 --strictPort",

@@ -2,6 +2,9 @@
   "name": "@sentra/config",
   "version": "0.0.0",
   "private": true,
+  "sentra": {
+    "role": "platform"
+  },
   "type": "module",
   "exports": {
     "./tsconfig-base.json": "./tsconfig-base.json",
