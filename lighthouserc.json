@@ -1,27 +1,87 @@
 {
-  "$comment": "Platform budget: the shell is what an adopter ships on day one, so its budget must survive the reference strip. Resource budgets are hard failures; lab timing metrics are warnings. See ADR 0009 (not yet authored -- flagged as a Task 8 follow-up, out of this task's file scope) for the full baseline table and the principle below. LIMITATION: every resource-summary assertion below is maxNumericValue -- an upper bound only. @lhci/cli 0.15.1's assertion vocabulary is exactly {minScore, maxLength, maxNumericValue} (verified against node_modules/@lhci/utils/src/assertions.js; minNumericValue is never destructured there, confirmed again by `grep -rl minNumericValue node_modules/.pnpm/` returning nothing while the same grep for maxNumericValue returns two files, proving the search itself works). A build that emits nothing therefore passes every maxNumericValue line here (0 <= any budget), and categories:accessibility at minScore 1 is not a substitute floor either: a syntactically valid, fully empty page (lang, viewport, title, one text node, zero scripts) scores a perfect 1.0. That floor is enforced by composition instead, but the composition must run in the same CI job against the same artifact to mean anything: the `lighthouse` job in .github/workflows/ci.yml builds with VITE_SENTRA_MOCKS=true, which is a different turbo cache key and therefore a different apps/shell/dist tree than the plain `pnpm build` the separate `verify` job's own `Check bundle sizes` step protects (see task-8-report.md's Step 1b for the two build hashes). An earlier version of this task treated `verify`'s bundle-size gate as covering this file's build; it does not, because the two jobs never share a dist. The fix is a `Check bundle sizes` step inside this same `lighthouse` job, immediately after its own Build step and before either Lighthouse invocation, so scripts/check-bundle-size.mjs's classify()/evaluate() run against the exact tree Lighthouse is about to measure -- verified by emptying apps/shell/dist and re-running it: classify()/evaluate() fail loudly ('dist does not exist' / 'budget matched no file'). BASELINE (measured 2026-08-30 from a forced, mocked build, numberOfRuns=1, http://127.0.0.1:4175/): total 293881B/25 requests, script 287967B/20, stylesheet 4809B/1, document 1105B/1, image 0B/0, third-party 0B/0, LCP 674.5ms, TBT 0ms, CLS 0, accessibility 1.0, best-practices 0.96. A budget's value is its distance from this baseline, not its raw size, so each line below is justified on its own terms rather than copied from a formula: script:size (400000, ~1.4x headroom) is left loose deliberately -- tight enough to catch a bad dependency landing, loose enough for normal growth; tightening it to a literal measured+15% (~340000) would make it fire on ordinary feature growth instead. stylesheet:size (5632) uses bundle-budgets.json's own convention (round the measured byte count up to the next whole KB, then +10%) since the placeholder 80000 was 16x the real 4809B and would not fire until something had already gone badly wrong. image:size (0) and third-party:count (0) are pinned to the exact measured value, not padded -- the shell ships zero images and zero third-party requests today, so either one appearing is a deliberate decision that must consciously raise this number rather than slide in under a stale ceiling; third-party:count was already built this way, image:size is now made consistent with it instead of hiding a real property (no images) behind a 500000-byte ceiling that could never fire. total:size (410000) is derived as the sum of the per-type ceilings above plus a small allowance for the unbudgeted document/other categories -- not measured-total+15% (~338000) -- so it can never become the binding constraint ahead of a dedicated per-type budget (a page that legitimately used its full 400000 script:size budget would already exceed a 338000 total ceiling with zero stylesheet or document bytes at all). largest-contentful-paint (800ms) is measured+15%, rounded up to the nearest 50ms. total-blocking-time (50ms) and cumulative-layout-shift (0.02) deliberately exceed a literal measured-zero-plus-15%-equals-zero: both are warn-only lab metrics, and a hard zero would warn on a single millisecond of scheduler jitter or a fraction of a pixel of shift on a shared CI runner, which signals runner noise rather than a regression -- a small explicit tolerance is recorded here rather than silently defaulting to zero and generating noise every run. categories:accessibility (minScore 1) and third-party:count (0) have zero headroom by construction and are the tightest gates in this file; they are passing on merit against the baseline above, not because nothing was measured. A related gap -- index.html referencing a renamed or missing entry script -- is closed by a different composition, not by this file: `apps/shell/e2e-platform-only/platform-only.smoke.spec.ts`, run by the `platform-only` CI job's 'Smoke-check the stripped shell boots in a browser' step (pnpm --filter @sentra/shell e2e:platform-only). Verified, not assumed: renaming the built entry script referenced by dist/index.html and re-running that spec against the broken dist (server started manually so Playwright's reuseExistingServer would not silently rebuild over the injected defect) produced 'platform chrome did not render; captured console/page errors: [...404 (Not Found)...]' -- a distinct, diagnostic failure, not a false pass. See task-8-report.md's Fix round 1 for the full transcript.",
+  "$comment": "Platform budget: the shell is what an adopter ships on day one, so its budget must survive the reference strip. Resource budgets are hard failures; lab timing metrics are warnings. See ADR 0009 (not yet authored -- flagged as a Task 8 follow-up, out of this task's file scope) for the full baseline table and the principle below. LIMITATION 1 (upper bounds only): @lhci/cli 0.15.1's assertion vocabulary is exactly {minScore, maxLength, maxNumericValue} (verified against node_modules/@lhci/utils/src/assertions.js; minNumericValue is never destructured there). A build that emits nothing therefore passes every maxNumericValue line here, and categories:accessibility at minScore 1 is not a substitute floor either: a syntactically valid, empty page scores a perfect 1.0. That gap is why `scripts/check-lighthouse-dom-floor.mjs` exists (see `domSizeFloor` below) -- it is a floor `lhci` itself cannot express. LIMITATION 2 (which build this measures): the `lighthouse` CI job in .github/workflows/ci.yml builds with VITE_SENTRA_MOCKS=true, which is a different turbo cache key and therefore a different apps/shell/dist tree than a plain `pnpm build` (see task-8-report.md's Step 1b for the two build hashes). The composition floor below only means anything measured against the same artifact this file's assertions run against, which is why the `lighthouse` job carries its own `Check bundle sizes` step immediately after its own Build step, ahead of either Lighthouse invocation. TWO LEGITIMATE PAGES, ONE BUDGET (fix round 2, re-measured 2026-08-30): this file's single URL is exercised by two different CI jobs, and they do not reach the same page. `lhci`'s startServerCommand only ever starts the shell's own preview server -- neither apps/storefront's nor apps/console's preview server is running during either job's Lighthouse step -- so BOTH jobs land on the shell's RemoteUnavailable panel, but by two different routes. In the `lighthouse` job (full tree, VITE_SENTRA_MOCKS=true pnpm build), the remotes manifest is populated with two real entries; the panel is reached via a FAILED integrity fetch against ports nothing is listening on, producing 8 console errors: dom-size 30, total 308282B/25 requests (script 302366B/20, stylesheet 4809B/1, document 1107B/1), LCP 704ms, CLS 0, accessibility 1.0, best-practices 0.96. In the `platform-only` job (stripped tree, scripts/strip-reference.mjs, now also VITE_SENTRA_MOCKS=true pnpm build -- see below), the manifest is genuinely empty; the panel is reached via the CLEAN empty-manifest path with zero fetch attempts, producing only 2 benign console entries (a missing favicon, a CSP frame-ancestors meta warning): dom-size 18, total 282506B/23 requests (script 276656B/20, stylesheet 4809B/1, document 1041B/1), LCP 663ms, CLS 0, accessibility 1.0, best-practices 0.96. These are not the same page, and every ceiling below is set from the WORSE of the two -- the full-tree failure path -- which is why the stripped-tree run passes with comfortable headroom rather than by coincidence. BUILD-ENV FIX (item 6): before fix round 2, the `platform-only` job's Build step ran plain `pnpm build` (no VITE_SENTRA_MOCKS), while every other place these budgets are calibrated or verified forces the mocked build. apps/shell/src/mocks/enabled.ts gates MSW on a statically-inlined `import.meta.env.VITE_SENTRA_MOCKS === 'true'` check, so Vite tree-shakes the mock-wiring branch out entirely when the flag is absent -- confirmed by measuring the same stripped tree both ways: unmocked script bytes were 125576, mocked were 276656, a ~150KB difference from a flag alone, with nothing else changed. Neither number ever exceeded this file's ceilings, so nothing was silently passing that should have failed -- but the job was comparing a different-shaped artifact than the one these numbers describe. `platform-only`'s Build step now runs VITE_SENTRA_MOCKS=true pnpm build to match, and to match the mocked build its own Playwright webServer.command already forces for the smoke spec. A build that emits nothing therefore passes every maxNumericValue line here (0 <= any budget) -- covered above as LIMITATION 1. script:size (400000, ~1.4x headroom over the 302366B failure-path baseline) is left loose deliberately -- tight enough to catch a bad dependency landing, loose enough for normal growth. stylesheet:size (5632) uses bundle-budgets.json's own convention (round the measured byte count up to the next whole KB, then +10%): ceil(4809/1024)=5KB, 5120*1.10=5632. image:size (0) and third-party:count (0) are pinned to the exact measured value on both legitimate pages, not padded -- the shell ships zero images and zero third-party requests either way, so either one appearing is a deliberate decision that must consciously raise this number. total:size (410000) is the sum of the per-type ceilings above plus a small allowance for the unbudgeted document/other categories -- not measured-total+15% -- so it can never become the binding constraint ahead of a dedicated per-type budget. largest-contentful-paint (800ms) is measured+15% off the worse (full-tree) page's 704ms, rounded up to the nearest 50ms: 704*1.15=809.6, but the pre-existing 800ms ceiling still clears the freshly re-measured value with the same intended headroom, so it is left as-is rather than churned for a few milliseconds of run-to-run drift. total-blocking-time (50ms) and cumulative-layout-shift (0.02) deliberately exceed a literal measured-zero-plus-15%-equals-zero: both are warn-only lab metrics, and a hard zero would warn on scheduler jitter or a fraction of a pixel of shift on a shared CI runner. categories:accessibility (minScore 1) and third-party:count (0) have zero headroom by construction and are the tightest gates in this file; confirmed passing on merit on BOTH legitimate pages, not because nothing was measured. DOM-SIZE FLOOR (item 5, fix round 2): `domSizeFloor` below (checked by scripts/check-lighthouse-dom-floor.mjs, wired into `verify:lighthouse` in package.json, run after `lhci autorun`) sets a lower bound `lhci` itself cannot express (LIMITATION 1). 14 sits strictly between the smallest known-legitimate reading (18, the stripped clean-path page above) and the class of failure this task exists to catch: a router-miss or broken-boot page in this same codebase measured 9 elements (see lighthouserc.reference.json's domSizeFloor note for the sibling case), and a fully-failed boot (a renamed entry script) does not even reach a normal Lighthouse report -- it fails outright with a NO_FCP runtime error, verified by reproducing that exact failure against this stripped tree during fix round 2. 14 is not the midpoint of those two classes; it is set close to the lower, proven-broken bound with headroom (5 elements) below the smaller legitimate reading, so ordinary run-to-run variation in the RemoteUnavailable panel's exact markup never risks a false failure. A related gap -- index.html referencing a renamed or missing entry script -- is closed by a different composition, not by this file: `apps/shell/e2e-platform-only/platform-only.smoke.spec.ts`, run by the `platform-only` CI job's 'Smoke-check the stripped shell boots in a browser' step (pnpm --filter @sentra/shell e2e:platform-only). Verified, not assumed: renaming the built entry script referenced by dist/index.html and re-running that spec against the broken dist (server started manually so Playwright's reuseExistingServer would not silently rebuild over the injected defect) produced 'platform chrome did not render; captured console/page errors: [...404 (Not Found)...]' -- a distinct, diagnostic failure, not a false pass. See task-8-report.md's Fix round 1 for that transcript, and Fix round 2 for the two-legitimate-pages finding and the NO_FCP reproduction above.",
   "ci": {
     "collect": {
       "numberOfRuns": 3,
       "startServerCommand": "pnpm --filter @sentra/shell exec vite preview --port 4175 --strictPort --host 127.0.0.1",
       "startServerReadyPattern": "Local",
-      "url": ["http://127.0.0.1:4175/"],
-      "settings": { "preset": "desktop" }
+      "url": [
+        "http://127.0.0.1:4175/"
+      ],
+      "settings": {
+        "preset": "desktop"
+      }
     },
     "assert": {
       "assertions": {
-        "resource-summary:script:size": ["error", { "maxNumericValue": 400000 }],
-        "resource-summary:stylesheet:size": ["error", { "maxNumericValue": 5632 }],
-        "resource-summary:image:size": ["error", { "maxNumericValue": 0 }],
-        "resource-summary:total:size": ["error", { "maxNumericValue": 410000 }],
-        "resource-summary:third-party:count": ["error", { "maxNumericValue": 0 }],
-        "largest-contentful-paint": ["warn", { "maxNumericValue": 800 }],
-        "total-blocking-time": ["warn", { "maxNumericValue": 50 }],
-        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.02 }],
-        "categories:accessibility": ["error", { "minScore": 1 }],
-        "categories:best-practices": ["warn", { "minScore": 0.9 }]
+        "resource-summary:script:size": [
+          "error",
+          {
+            "maxNumericValue": 400000
+          }
+        ],
+        "resource-summary:stylesheet:size": [
+          "error",
+          {
+            "maxNumericValue": 5632
+          }
+        ],
+        "resource-summary:image:size": [
+          "error",
+          {
+            "maxNumericValue": 0
+          }
+        ],
+        "resource-summary:total:size": [
+          "error",
+          {
+            "maxNumericValue": 410000
+          }
+        ],
+        "resource-summary:third-party:count": [
+          "error",
+          {
+            "maxNumericValue": 0
+          }
+        ],
+        "largest-contentful-paint": [
+          "warn",
+          {
+            "maxNumericValue": 800
+          }
+        ],
+        "total-blocking-time": [
+          "warn",
+          {
+            "maxNumericValue": 50
+          }
+        ],
+        "cumulative-layout-shift": [
+          "warn",
+          {
+            "maxNumericValue": 0.02
+          }
+        ],
+        "categories:accessibility": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "categories:best-practices": [
+          "warn",
+          {
+            "minScore": 0.9
+          }
+        ]
       }
     },
-    "upload": { "target": "filesystem", "outputDir": ".lighthouseci" }
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
+    }
+  },
+  "domSizeFloor": {
+    "http://127.0.0.1:4175/": 14
   }
 }

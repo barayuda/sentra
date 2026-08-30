@@ -302,8 +302,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      # VITE_SENTRA_MOCKS=true here, not a plain `pnpm build`: every other
+      # place lighthouserc.json's shell budgets are calibrated or verified
+      # forces the mocked build (see its own $comment and task-8-report.md's
+      # Step 1b), and apps/shell/src/mocks/enabled.ts gates MSW on a
+      # statically-inlined env check that Vite tree-shakes on either value.
+      # An unmocked build here measured a genuinely smaller artifact (125576
+      # script bytes on a stripped tree) than a mocked one (276656) -- still
+      # under budget either way today, but the wrong artifact shape to be
+      # comparing against a mocked-build baseline. This also matches the
+      # build Playwright's own webServer.command below already forces for the
+      # same reason.
       - name: Build
-        run: pnpm build
+        run: VITE_SENTRA_MOCKS=true pnpm build
 
       # The platform gate is the boundary this whole milestone claims is real.
       # Running it here, on every stripped-tree CI execution, is what keeps

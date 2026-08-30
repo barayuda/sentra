@@ -1,0 +1,103 @@
+#!/usr/bin/env node
+import { readFile, readdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import process from 'node:process'
+
+/**
+ * Checks every collected Lighthouse report's DOM size against a floor.
+ *
+ * `@lhci/cli` 0.15.1's assertion vocabulary is exactly `{minScore, maxLength,
+ * maxNumericValue}` — there is no `minNumericValue`, so `lhci autorun` itself
+ * cannot assert a *lower* bound on anything, `dom-size` included (see both
+ * `lighthouserc*.json` `$comment`s). That gap is exactly how three URLs
+ * measured a `RemoteUnavailable` panel, a blank router-miss, and a real page
+ * indistinguishably: every `maxNumericValue` budget in this repo was
+ * satisfied by all three, because a smaller, more-broken page can only ever
+ * cost *less*. `dom-size`'s own `score`/`scoreDisplayMode` is
+ * `metricSavings`, not pass/fail, so it never surfaces this either.
+ *
+ * This script is the floor `lhci` cannot express: a page that renders
+ * correctly has a known, non-trivial minimum element count, and a run that
+ * falls under it is a *different page* than the one this budget describes,
+ * not a faster one. It runs after `lhci autorun` has written its reports,
+ * reading them back rather than re-running Lighthouse itself.
+ *
+ * @param {Array<{requestedUrl: string, numericValue: number}>} reports - One entry per collected report.
+ * @param {Record<string, number>} floors - Requested URL to minimum DOM element count.
+ * @returns {string[]} One message per failure; empty when every floor is met.
+ */
+export function checkDomFloors(reports, floors) {
+  const failures = []
+  const matched = new Set()
+
+  for (const report of reports) {
+    const floor = floors[report.requestedUrl]
+    if (floor === undefined) continue
+    matched.add(report.requestedUrl)
+    if (report.numericValue < floor) {
+      failures.push(
+        `${report.requestedUrl}: dom-size is ${report.numericValue} elements, under its floor of ${floor} — this measured a different (likely broken) page, not a smaller one`,
+      )
+    }
+  }
+
+  /* Same vacuity guard as scripts/check-bundle-size.mjs's `evaluate`: a floor
+     that matched no report proves nothing — a renamed or dropped URL would
+     otherwise leave this script silently passing while checking nothing. */
+  for (const url of Object.keys(floors)) {
+    if (!matched.has(url)) failures.push(`floor for ${url} matched no collected report`)
+  }
+
+  return failures
+}
+
+/**
+ * Reads every `*.report.json` lhci wrote for one config's URLs.
+ *
+ * @param {string} outputDir - `ci.upload.outputDir` from the lighthouserc file.
+ * @returns {Promise<Array<{requestedUrl: string, numericValue: number}>>} One entry per report file.
+ */
+async function readReports(outputDir) {
+  const entries = await readdir(outputDir)
+  const reportFiles = entries.filter((name) => name.endsWith('.report.json'))
+  return Promise.all(
+    reportFiles.map(async (name) => {
+      const report = JSON.parse(await readFile(join(outputDir, name), 'utf8'))
+      return { requestedUrl: report.requestedUrl, numericValue: report.audits['dom-size'].numericValue }
+    }),
+  )
+}
+
+/**
+ * Fails when any collected report's DOM size is under its configured floor.
+ *
+ * Named risk area: none directly — this is a test-validity gate, not a
+ * security or performance one. Its purpose is making sure the budgets above
+ * it in the same lighthouserc file are ever measuring the page they claim to.
+ */
+async function main() {
+  const configPath = process.argv[2]
+  if (!configPath) {
+    console.error('usage: node scripts/check-lighthouse-dom-floor.mjs <lighthouserc.json>')
+    process.exit(1)
+  }
+
+  const config = JSON.parse(await readFile(configPath, 'utf8'))
+  const floors = config.domSizeFloor ?? {}
+  if (Object.keys(floors).length === 0) {
+    console.error(`check-lighthouse-dom-floor: ${configPath} declares no "domSizeFloor" — nothing to check`)
+    process.exit(1)
+  }
+
+  const outputDir = config.ci?.upload?.outputDir ?? '.lighthouseci'
+  const reports = await readReports(outputDir)
+  const failures = checkDomFloors(reports, floors)
+
+  if (failures.length > 0) {
+    for (const failure of failures) console.error(`dom-size floor check failed: ${failure}`)
+    process.exit(1)
+  }
+  console.log(`dom-size floor check passed: ${Object.keys(floors).length} URL(s), ${reports.length} report(s)`)
+}
+
+if (process.argv[1]?.endsWith('check-lighthouse-dom-floor.mjs')) await main()
