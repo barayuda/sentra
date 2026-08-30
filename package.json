@@ -17,7 +17,8 @@
     "lint": "turbo run lint && eslint eslint.config.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify:sourcemaps": "node scripts/check-sourcemaps.mjs"
+    "verify:sourcemaps": "node scripts/check-sourcemaps.mjs",
+    "verify:bundle-size": "node scripts/check-bundle-size.mjs"
   },
   "devDependencies": {
     "eslint": "10.9.1",

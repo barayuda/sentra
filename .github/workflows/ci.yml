@@ -47,6 +47,9 @@ jobs:
       - name: Check sourcemaps are emitted
         run: pnpm verify:sourcemaps
 
+      - name: Check bundle sizes
+        run: pnpm verify:bundle-size
+
       - name: Typecheck
         run: pnpm typecheck
 

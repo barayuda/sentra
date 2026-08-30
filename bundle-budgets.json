@@ -1,0 +1,8 @@
+{
+  "$comment": "Gzipped byte budgets per app. Patterns are matched against paths relative to the app's dist/ directory; * does not cross a path separator. An app directory that is not present is skipped (deleting the reference half is supported), but a run that measures no app at all fails. Regenerate the numbers with: pnpm build && node scripts/check-bundle-size.mjs --report. Rule for setting a budget from a measurement: round the measured gzipped byte count up to the next whole kilobyte (1 KB = 1024 bytes, i.e. ceil(bytes / 1024) * 1024), then add 10 percent headroom (* 1.1). Measured 2026-08-30 from a forced build: storefront index.js 4814B -> 5120B -> 5632B; storefront css 4761B -> 5120B -> 5632B; shell index.js 4220B -> 5120B -> 5632B; shell css 4444B -> 5120B -> 5632B; console index.js 4350B -> 5120B -> 5632B; console css 4510B -> 5120B -> 5632B. All six land in the same 4-5KB band by coincidence of the apps sharing near-identical entry/shell scaffolding, not because the rule was fudged to match.",
+  "apps": {
+    "apps/storefront": { "assets/index-*.js": 5632, "assets/*.css": 5632 },
+    "apps/shell": { "assets/index-*.js": 5632, "assets/*.css": 5632 },
+    "apps/console": { "assets/index-*.js": 5632, "assets/*.css": 5632 }
+  }
+}
