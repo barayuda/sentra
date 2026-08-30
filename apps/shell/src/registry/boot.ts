@@ -19,6 +19,7 @@ import { initialSession } from '../session.ts'
 import ForbiddenView from '../views/ForbiddenView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import { brokenRemoteNames } from './break.ts'
+import { verifyEntries } from './integrity.ts'
 import { loadRemotes, type RemoteLoadOutcome } from './load.ts'
 import { fetchRemoteManifest } from './manifest.ts'
 import { mergeEventSchemas } from './schema.ts'
@@ -86,6 +87,17 @@ export async function bootShell(): Promise<void> {
     console.error(`[sentra] manifest entry ${rejection.index} rejected: ${rejection.reason}`)
   }
 
+  /* 2b. Integrity. Verify published digests before any of these URLs becomes
+         the src of a script element. A rejected entry is treated exactly like
+         a failed load — it keeps its base path, renders `RemoteUnavailable`,
+         and raises `remote:failed` — because from the operator's side "this
+         remote is not running" and "this remote is not the code we published"
+         both mean the same thing: do not use it, and say so. */
+  const integrity = await verifyEntries(parsed.entries)
+  for (const rejection of integrity.rejected) {
+    console.error(`[sentra] remote ${rejection.entry.name} rejected: ${rejection.reason}`)
+  }
+
   /* 3. Registration, then loading. `force: true` lets a re-register replace an
         entry rather than being ignored — see ADR 0004 and the Task 1 spike.
 
@@ -102,7 +114,7 @@ export async function bootShell(): Promise<void> {
         the two things an operator actually changes — which remote, and where
         it lives. */
   registerRemotes(
-    parsed.entries.map((entry) => ({
+    integrity.verified.map((entry) => ({
       name: entry.name,
       entry: entry.entry,
       type: 'module' as const,
@@ -116,7 +128,7 @@ export async function bootShell(): Promise<void> {
      flag, so a visitor cannot disable a remote with a query string. */
   const broken = mocksEnabled() ? brokenRemoteNames(globalThis.location.search) : new Set<string>()
 
-  const outcomes = await loadRemotes(parsed.entries, async (name) => {
+  const outcomes = await loadRemotes(integrity.verified, async (name) => {
     if (broken.has(name)) throw new Error('remote disabled by ?break for demonstration')
     return (await loadRemote<{ default: RemoteModule }>(`${name}/remote`))!.default
   })
@@ -127,10 +139,17 @@ export async function bootShell(): Promise<void> {
     (outcome): outcome is Extract<RemoteLoadOutcome, { status: 'loaded' }> =>
       outcome.status === 'loaded',
   )
-  const failed = outcomes.filter(
-    (outcome): outcome is Extract<RemoteLoadOutcome, { status: 'failed' }> =>
-      outcome.status === 'failed',
-  )
+  const failed = [
+    ...outcomes.filter(
+      (outcome): outcome is Extract<RemoteLoadOutcome, { status: 'failed' }> =>
+        outcome.status === 'failed',
+    ),
+    ...integrity.rejected.map((rejection) => ({
+      status: 'failed' as const,
+      entry: rejection.entry,
+      reason: rejection.reason,
+    })),
+  ]
 
   /* An empty or broken manifest is an infrastructure failure, not an
      authorization failure — it must not redirect to `/forbidden`. When
@@ -140,7 +159,7 @@ export async function bootShell(): Promise<void> {
      own error message, while a manifest that parsed fine but listed
      nothing says so explicitly. */
   const rootRoute: RouteRecordRaw =
-    parsed.entries.length === 0
+    integrity.verified.length === 0
       ? {
           path: '/',
           name: 'platform-unavailable',
@@ -152,7 +171,7 @@ export async function bootShell(): Promise<void> {
               : manifest.error.message,
           },
         }
-      : { path: '/', redirect: parsed.entries[0]!.basePath }
+      : { path: '/', redirect: integrity.verified[0]!.basePath }
 
   const router = createRouter({
     history: createWebHistory(),
