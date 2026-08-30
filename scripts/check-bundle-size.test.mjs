@@ -7,6 +7,7 @@ import {
   classify,
   evaluate,
   gzippedSize,
+  invalidBudgetValueFailures,
   matchBudget,
   unknownBudgetKeyFailures,
 } from './check-bundle-size.mjs'
@@ -176,6 +177,61 @@ describe('unknownBudgetKeyFailures', () => {
       'assets/index-*.js': 10,
     })
     expect(failures).toEqual([])
+  })
+})
+
+describe('invalidBudgetValueFailures', () => {
+  it('rejects a quoted numeric string rather than coercing it', () => {
+    const failures = invalidBudgetValueFailures({ 'assets/index-*.js': '5632' })
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('assets/index-*.js')
+    expect(failures[0]).toContain('"5632"')
+  })
+
+  it('rejects null', () => {
+    const failures = invalidBudgetValueFailures({ '$total:js': null })
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('$total:js')
+  })
+
+  it('rejects a negative number', () => {
+    const failures = invalidBudgetValueFailures({ 'assets/*.css': -1 })
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('assets/*.css')
+  })
+
+  it('rejects zero as not a meaningful budget', () => {
+    const failures = invalidBudgetValueFailures({ 'assets/*.css': 0 })
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('assets/*.css')
+  })
+
+  it('rejects Infinity', () => {
+    const failures = invalidBudgetValueFailures({ '$total:css': Infinity })
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('$total:css')
+  })
+
+  it('accepts a valid positive number for both a glob key and a $total key', () => {
+    const failures = invalidBudgetValueFailures({
+      'assets/index-*.js': 5632,
+      '$total:js': 100000,
+    })
+    expect(failures).toEqual([])
+  })
+
+  it('is reported by evaluate() alongside a real, passing measurement', () => {
+    // A real file is present and comfortably under its own budget, so this
+    // test would pass vacuously (failures.length > 0 for the wrong reason)
+    // only if some other check were failing -- it is not, so the assertion
+    // below can only be satisfied by invalidBudgetValueFailures itself firing.
+    const { failures } = evaluate([{ file: 'assets/index-x.js', bytes: 10 }], {
+      'assets/index-*.js': 5632,
+      '$total:js': '100',
+    })
+    expect(
+      failures.some((f) => f.includes('$total:js') && f.includes('not a positive number')),
+    ).toBe(true)
   })
 })
 

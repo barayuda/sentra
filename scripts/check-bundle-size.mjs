@@ -92,6 +92,32 @@ export function unknownBudgetKeyFailures(budgets) {
 }
 
 /**
+ * Flags budget values that are not a usable byte limit.
+ *
+ * A budgets file is hand-edited by adopters: a JSON formatter can quote a
+ * number, a merge conflict can leave a `null`, a stray trailing space turns
+ * `5632` into `"5632 "`. Every one of those compares as `NaN` against a real
+ * measurement, and `NaN <= x` and `x <= NaN` are both false, so a malformed
+ * value never fails — the budget reads as coverage while enforcing nothing,
+ * the same defect as an absent file, an empty aggregate, or an unknown key,
+ * one level further in. A quoted number is rejected outright rather than
+ * coerced: a `"5632"` in the file is a mistake worth naming, not silently
+ * accepting. Checked for every key alike (glob or `$total:`) — a malformed
+ * value is exactly as inert on a total as it is on a pattern.
+ *
+ * @param {Record<string, unknown>} budgets - An app's budget object.
+ * @returns {string[]} One message per key whose value is not a finite number greater than zero.
+ */
+export function invalidBudgetValueFailures(budgets) {
+  return Object.entries(budgets)
+    .filter(([, value]) => !(typeof value === 'number' && Number.isFinite(value) && value > 0))
+    .map(
+      ([key, value]) =>
+        `budget for "${key}" is ${JSON.stringify(value)}, which is not a positive number`,
+    )
+}
+
+/**
  * Compares measurements against budgets.
  *
  * Two kinds of budget are checked: per-file glob patterns (unchanged from the
@@ -99,8 +125,10 @@ export function unknownBudgetKeyFailures(budgets) {
  * (see `TOTAL_BUDGETS`). The totals exist because most of a bundle's weight
  * lives in bundler-generated chunk names no glob can name stably — a total is
  * rename-proof where a pattern is not. An unrecognised `$`-prefixed key (see
- * `unknownBudgetKeyFailures`) is reported here too, so an app that is present
- * gets the check without a caller having to remember to run it separately.
+ * `unknownBudgetKeyFailures`) and a malformed budget value (see
+ * `invalidBudgetValueFailures`) are both reported here too, so an app that is
+ * present gets both checks without a caller having to remember to run them
+ * separately.
  *
  * @param {Array<{file: string, bytes: number}>} measurements - Measured files.
  * @param {Record<string, number>} budgets - Pattern (or `$total:*` key) to max gzipped bytes.
@@ -108,7 +136,7 @@ export function unknownBudgetKeyFailures(budgets) {
  */
 export function evaluate(measurements, budgets) {
   const rows = []
-  const failures = [...unknownBudgetKeyFailures(budgets)]
+  const failures = [...unknownBudgetKeyFailures(budgets), ...invalidBudgetValueFailures(budgets)]
   const matched = new Set()
 
   for (const measurement of measurements) {
@@ -241,12 +269,15 @@ async function main() {
   for (const [app, budgets] of Object.entries(config.apps)) {
     const presence = await classify(app)
 
-    /* A typo'd reserved key is wrong in the budgets file, not in the build, so
-       it must be caught whether or not this app was built or even exists —
-       hence this runs before either skip below, not inside the `present`
-       branch where `evaluate` otherwise catches it. */
+    /* A typo'd reserved key or a malformed value is wrong in the budgets file,
+       not in the build, so both must be caught whether or not this app was
+       built or even exists — hence this runs before either skip below, not
+       inside the `present` branch where `evaluate` otherwise catches it. */
     if (presence !== 'present') {
-      allFailures.push(...unknownBudgetKeyFailures(budgets).map((failure) => `${app}: ${failure}`))
+      allFailures.push(
+        ...unknownBudgetKeyFailures(budgets).map((failure) => `${app}: ${failure}`),
+        ...invalidBudgetValueFailures(budgets).map((failure) => `${app}: ${failure}`),
+      )
     }
 
     if (presence === 'absent') {
