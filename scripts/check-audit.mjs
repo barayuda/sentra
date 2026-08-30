@@ -49,6 +49,29 @@ export function reconcile(advisories, allowlist, today) {
        accepted today and fails tomorrow. Comparing against end-of-day UTC
        keeps that boundary unambiguous across timezones. */
     const deadline = new Date(`${entry.expires}T23:59:59Z`)
+    /* The regex above proves the *shape* `NNNN-NN-NN`, not that the date
+       exists. "2026-13-45" fails to parse at all, so its `getTime()` is NaN —
+       but "2026-02-30" is a case JS's `Date` does NOT reject: it silently
+       rolls the overflow into the next month (2026-03-02), producing a VALID
+       Date whose `getTime()` is a real number. A bare `Number.isNaN` check
+       misses that roll-over case entirely, so without the round-trip
+       comparison below such an entry is judged neither malformed nor expired
+       and silences its advisory permanently. That is the failure this whole
+       allowlist is designed to prevent, reachable by a typo — and the
+       roll-over case is the more plausible typo of the two. Named risk area:
+       supply chain. */
+    const [expiryYear, expiryMonth, expiryDay] = entry.expires.split('-').map(Number)
+    const isRealCalendarDate =
+      !Number.isNaN(deadline.getTime()) &&
+      deadline.getUTCFullYear() === expiryYear &&
+      deadline.getUTCMonth() + 1 === expiryMonth &&
+      deadline.getUTCDate() === expiryDay
+    if (!isRealCalendarDate) {
+      failures.push(
+        `allowlist entry ${entry.id} (${entry.module}) has an expires value "${entry.expires}" that is not a real calendar date`,
+      )
+      continue
+    }
     if (deadline.getTime() < today.getTime()) {
       failures.push(
         `allowlist entry ${entry.id} (${entry.module}) expired on ${entry.expires} — upgrade, replace, or re-accept it with a new deadline`,

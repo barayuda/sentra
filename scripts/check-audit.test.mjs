@@ -70,6 +70,33 @@ describe('reconcile', () => {
     const { failures } = reconcile([ADVISORY], allowlist, TODAY)
     expect(failures.some((f) => f.includes('reason'))).toBe(true)
   })
+
+  it('rejects an entry whose expires names a month that does not exist', () => {
+    const allowlist = [
+      { id: 'EXAMPLE-0001', module: 'example-lib', reason: 'test', expires: '2026-13-45' },
+    ]
+    const { failures, accepted } = reconcile([ADVISORY], allowlist, TODAY)
+    expect(failures.some((f) => f.includes('not a real calendar date'))).toBe(true)
+    expect(accepted).toEqual([])
+  })
+
+  it('rejects an entry whose expires names a day that does not exist in that month', () => {
+    const allowlist = [
+      { id: 'EXAMPLE-0001', module: 'example-lib', reason: 'test', expires: '2026-02-30' },
+    ]
+    const { failures, accepted } = reconcile([ADVISORY], allowlist, TODAY)
+    expect(failures.some((f) => f.includes('not a real calendar date'))).toBe(true)
+    expect(accepted).toEqual([])
+  })
+
+  it('accepts a leap-day expiry in a real leap year', () => {
+    const allowlist = [
+      { id: 'EXAMPLE-0001', module: 'example-lib', reason: 'test', expires: '2028-02-29' },
+    ]
+    const { failures, accepted } = reconcile([ADVISORY], allowlist, TODAY)
+    expect(failures).toEqual([])
+    expect(accepted).toEqual(['EXAMPLE-0001'])
+  })
 })
 
 describe('parseAuditOutput', () => {
