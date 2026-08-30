@@ -48,5 +48,14 @@ const worker = setupWorker(
  * warning on each would train everyone to ignore the warnings.
  */
 export async function startShellMocks(): Promise<void> {
-  await worker.start({ onUnhandledRequest: 'bypass', quiet: true })
+  try {
+    await worker.start({ onUnhandledRequest: 'bypass', quiet: true })
+  } catch (error) {
+    /* Reachable only if this module is ever loaded on a platform-only build —
+       see `vite.config.ts`'s conditional `external`, which normally keeps
+       this file itself from being requested in that case. Falling back to a
+       quiet no-op keeps `bootShell`'s "never throws for a remote's sake"
+       guarantee even in that unreachable-in-practice scenario. */
+    console.warn('[sentra] mock worker failed to start:', error)
+  }
 }
