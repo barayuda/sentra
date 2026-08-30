@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildCspPolicy,
+  buildCspPolicyForMeta,
   remoteOrigins,
   validateExtraSources,
   validateSourceOwners,
@@ -184,6 +185,59 @@ describe('buildCspPolicy', () => {
     const policy = buildCspPolicy([], { 'img-src': [] })
     expect(policy).toMatch(/img-src 'self' data:(;|$)/)
     expect(policy.split(';').map((part) => part.trim())).not.toContain('')
+  })
+})
+
+describe('buildCspPolicyForMeta', () => {
+  /* `frame-ancestors` is the only meta-ignored directive `buildDirectives`
+     currently emits; `report-uri` and `report-to` are asserted absent from
+     both forms below (neither the header nor the meta form emits them today)
+     precisely so the meta-ignored *set* is exercised by name, not just the
+     one member that happens to be wired up right now. */
+  it('omits frame-ancestors, which a meta tag would only log an error for', () => {
+    expect(buildCspPolicyForMeta(ENTRIES, {})).not.toContain('frame-ancestors')
+  })
+
+  it('is otherwise identical to the header form with the meta-ignored directives removed', () => {
+    const header = buildCspPolicy(ENTRIES, EXTRA)
+    const meta = buildCspPolicyForMeta(ENTRIES, EXTRA)
+
+    const withoutMetaIgnored = header
+      .split('; ')
+      .filter(
+        (directive) =>
+          !['frame-ancestors', 'report-uri', 'report-to'].some((name) =>
+            directive.startsWith(`${name} `),
+          ),
+      )
+      .join('; ')
+
+    expect(meta).toBe(withoutMetaIgnored)
+  })
+
+  it('never emits report-uri or report-to in either delivery form', () => {
+    expect(buildCspPolicy(ENTRIES, {})).not.toMatch(/report-(uri|to)/)
+    expect(buildCspPolicyForMeta(ENTRIES, {})).not.toMatch(/report-(uri|to)/)
+  })
+
+  it('rejects extra sources exactly as the header form does', () => {
+    expect(() =>
+      buildCspPolicyForMeta(ENTRIES, { 'script-src': ['https://evil.example'] }),
+    ).toThrow()
+  })
+
+  it('still unions extra sources into the directives that declare them', () => {
+    const policy = buildCspPolicyForMeta(ENTRIES, EXTRA)
+    expect(policy).toMatch(/connect-src[^;]*https:\/\/demo-shop\.myshopify\.com/)
+    expect(policy).toMatch(/img-src[^;]*https:\/\/cdn\.shopify\.com/)
+  })
+
+  it('never contains a semicolon-separated empty directive', () => {
+    expect(
+      buildCspPolicyForMeta([], {})
+        .split(';')
+        .map((part) => part.trim()),
+    ).not.toContain('')
   })
 })
 

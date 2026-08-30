@@ -205,24 +205,6 @@ proved it — but the episode is the same defect class appearing inside a planni
 not only inside code, and is recorded here rather than quietly corrected out of the
 record.
 
-One further, more direct finding surfaced while gathering evidence for this document: the
-[claims.md](./claims.md) claim that the platform boots in a browser with no console errors
-after the reference implementation is deleted does not currently pass, and has been removed
-from that table rather than softened. `apps/shell/e2e-platform-only/platform-only.smoke.spec.ts:70`
-asserts zero console or page errors on the stripped build; the shell's CSP, delivered via
-the `<meta>` tag described above, causes Chrome to log "The Content Security Policy
-directive 'frame-ancestors' is ignored when delivered via a `<meta>` element" on every
-page load, stripped tree or not. This is a consequence of the accepted, documented
-meta-delivery limitation above, surfacing in a test whose assertion did not anticipate it —
-not a defect introduced by deletion itself. The claim was deleted rather than reworded to
-a weaker version of itself, because a partially-true compound claim left in the table reads
-as fully verified to anyone who does not read the evidence command closely. The parts of it
-that remain true — the stripped platform builds, typechecks, lints, and tests cleanly — are
-each independently covered by this repository's ordinary build/typecheck/lint/test commands,
-run against the stripped tree by the same `platform-only` CI job; only the zero-console-error
-browser-boot assertion does not currently hold, and this document says so here rather than
-in a claim engineered to avoid saying it.
-
 ## Adopting it
 
 Clone the repository, then decide whether you want the reference implementation at all.

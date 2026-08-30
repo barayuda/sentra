@@ -56,16 +56,23 @@ A `<meta http-equiv="Content-Security-Policy">` tag cannot express everything a 
 deployment needs. Chrome's own console diagnostic, produced when the meta form is used,
 states it plainly: `frame-ancestors` is ignored entirely when delivered via `<meta>`.
 `report-uri` and `report-to` are unavailable in meta form for the same reason — both must
-arrive as the `Content-Security-Policy` HTTP response header to have any effect. The
-generator injects the meta tag into `dist/index.html` anyway, so the app is protected the
-moment it is served by anything (including a bare static file server), but it also writes
-the identical policy string to `apps/shell/dist/csp-headers.txt`. **An adopter who ships
-only the meta tag has no clickjacking protection from this policy at all** — `csp-
-headers.txt` exists so an operator fronting the shell with a real server (nginx, a CDN, an
-edge function) can set the `Content-Security-Policy` header directly and get
-`frame-ancestors`, `report-uri`, and `report-to` working. This is a manual step an
-operator must take; the build does not and cannot do it for them, because it has no
-visibility into how the app will actually be served.
+arrive as the `Content-Security-Policy` HTTP response header to have any effect. Because
+that Chrome diagnostic is itself a logged console error, and this repository's
+platform-only smoke check (`apps/shell/e2e-platform-only/platform-only.smoke.spec.ts`)
+fails the build on any unexpected console error, the two delivery forms carry two different
+policy strings, built by two functions in `scripts/csp.mjs`: `buildCspPolicyForMeta` omits
+`frame-ancestors`, `report-uri`, and `report-to` (its `META_IGNORED_DIRECTIVES` set) from
+what `scripts/generate-csp.mjs` injects into `dist/index.html`, while `buildCspPolicy` keeps
+the full policy, byte-identical to before this split, for `apps/shell/dist/csp-headers.txt`.
+**An adopter who ships only the meta tag has no clickjacking protection from this policy at
+all** — this was already true before the split, since the directive was never enforced in
+meta form; omitting it from the meta tag changes nothing a browser was doing, it only stops
+the meta tag from logging an error about a protection it never provided. `csp-headers.txt`
+exists so an operator fronting the shell with a real server (nginx, a CDN, an edge function)
+can set the `Content-Security-Policy` header directly and get `frame-ancestors`,
+`report-uri`, and `report-to` working. This is a manual step an operator must take; the
+build does not and cannot do it for them, because it has no visibility into how the app will
+actually be served.
 
 The injector also refuses to guess an insertion point when a document has no recognisable
 `<meta charset>` declaration (`injectMeta` in `scripts/generate-csp.mjs`), rather than

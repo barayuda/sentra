@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { buildCspPolicy, validateSourceOwners } from './csp.mjs'
+import { buildCspPolicy, buildCspPolicyForMeta, validateSourceOwners } from './csp.mjs'
 
 /** Repository root, derived from this file's location so cwd does not matter. */
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -117,10 +117,18 @@ export function injectMeta(html, policy) {
  * `<meta>`-delivered policy cannot express `report-uri` or `report-to`, and
  * `frame-ancestors` is **ignored entirely** in meta form — Chrome prints
  * "The Content Security Policy directive 'frame-ancestors' is ignored when
- * delivered via a <meta> element" on every load. The directive is emitted
- * anyway because the identical string is written to `dist/csp-headers.txt`,
- * where a server delivering it as a header does honour it. An adopter who
- * ships only the meta tag has no clickjacking protection from this policy.
+ * delivered via a <meta> element" on every load of a document carrying it
+ * there. Because that logged error costs a real CI gate (a zero-console-error
+ * smoke check) and buys no protection at all — the browser was never going to
+ * honour the directive in meta form — the two delivery forms carry different
+ * policy strings: `scripts/csp.mjs`'s `buildCspPolicyForMeta` omits
+ * `frame-ancestors`, `report-uri`, and `report-to` (its
+ * `META_IGNORED_DIRECTIVES`) from what is injected into `dist/index.html`,
+ * while `buildCspPolicy` keeps the full policy, unchanged, for
+ * `dist/csp-headers.txt`. An adopter who ships only the meta tag has no
+ * clickjacking protection from this policy — that was already true before
+ * this split, since the directive was never enforced in meta form; the split
+ * only stops the meta tag from claiming a protection it never provided.
  */
 async function main() {
   const entries = JSON.parse(await readFile(MANIFEST_PATH, 'utf8'))
@@ -130,12 +138,14 @@ async function main() {
      have pruned correctly, and the policy it produces would be wrong in a way
      nothing downstream detects. */
   validateSourceOwners(sources)
-  const policy = buildCspPolicy(entries, toExtraSources(sources))
+  const extra = toExtraSources(sources)
+  const headerPolicy = buildCspPolicy(entries, extra)
+  const metaPolicy = buildCspPolicyForMeta(entries, extra)
 
   const html = await readFile(HTML_PATH, 'utf8')
   let injected
   try {
-    injected = injectMeta(html, policy)
+    injected = injectMeta(html, metaPolicy)
   } catch (error) {
     /* `injectMeta` stays file-path-agnostic so it is trivial to unit test;
        the path is attached here, at the one call site that knows it, so a
@@ -144,11 +154,12 @@ async function main() {
     throw new Error(`${HTML_PATH}: ${error.message}`, { cause: error })
   }
   await writeFile(HTML_PATH, injected)
-  await writeFile(HEADERS_PATH, `Content-Security-Policy: ${policy}\n`)
+  await writeFile(HEADERS_PATH, `Content-Security-Policy: ${headerPolicy}\n`)
 
   console.log(`csp: applied to ${HTML_PATH}`)
   console.log(`csp: header form written to ${HEADERS_PATH}`)
-  console.log(`csp: ${policy}`)
+  console.log(`csp: meta form: ${metaPolicy}`)
+  console.log(`csp: header form: ${headerPolicy}`)
 }
 
 if (process.argv[1]?.endsWith('generate-csp.mjs')) await main()

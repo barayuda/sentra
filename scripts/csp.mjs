@@ -124,7 +124,31 @@ export function remoteOrigins(entries) {
 }
 
 /**
- * Builds the shell's Content-Security-Policy from its remote manifest.
+ * Directives that a browser silently ignores when a policy is delivered via a
+ * `<meta http-equiv="Content-Security-Policy">` element rather than the
+ * `Content-Security-Policy` HTTP response header. Each is on this set for its
+ * own documented reason, not by inference from the others:
+ *
+ * - `frame-ancestors` — the CSP specification scopes it to the HTTP header
+ *   delivery form only; Chrome's own console diagnostic states this plainly
+ *   ("The Content Security Policy directive 'frame-ancestors' is ignored when
+ *   delivered via a `<meta>` element"), logged on every load of a document
+ *   that carries it in meta form.
+ * - `report-uri` — meaningless without a network request the meta form has no
+ *   mechanism to trigger; documented behaviour, same as `frame-ancestors`.
+ * - `report-to` — the modern replacement for `report-uri`; ignored in meta
+ *   form for the identical reason.
+ *
+ * Defined explicitly, and filtered against by name, so that adding
+ * `report-uri` or `report-to` to `buildCspPolicy`'s `directives` object in the
+ * future cannot silently reintroduce a meta-tag console error the way
+ * `frame-ancestors` did here.
+ */
+const META_IGNORED_DIRECTIVES = new Set(['frame-ancestors', 'report-uri', 'report-to'])
+
+/**
+ * Builds the ordered `[name, sources]` pairs common to both delivery forms of
+ * the shell's Content-Security-Policy.
  *
  * Remote origins are derived from `remotes.json` rather than maintained by
  * hand, and that is the core of the design: the manifest is the list of
@@ -145,10 +169,10 @@ export function remoteOrigins(entries) {
  *
  * @param {Array<{entry: string}>} entries - Manifest entries.
  * @param {Record<string, string[]>} extra - Extra sources per directive.
- * @returns {string} A policy string suitable for a header or a meta tag.
+ * @returns {Array<[string, string[]]>} Directive name/sources pairs, in emit order.
  * @throws {Error} When `extra` would weaken the policy.
  */
-export function buildCspPolicy(entries, extra) {
+function buildDirectives(entries, extra) {
   validateExtraSources(extra)
 
   const origins = remoteOrigins(entries)
@@ -169,7 +193,50 @@ export function buildCspPolicy(entries, extra) {
     'frame-ancestors': ["'none'"],
   }
 
-  return Object.entries(directives)
-    .map(([name, sources]) => `${name} ${[...sources, ...(extra[name] ?? [])].join(' ')}`)
+  return Object.entries(directives).map(([name, sources]) => [
+    name,
+    [...sources, ...(extra[name] ?? [])],
+  ])
+}
+
+/**
+ * Builds the shell's Content-Security-Policy in its **header** form.
+ *
+ * This is the full policy, `frame-ancestors 'none'` included, meant for the
+ * `Content-Security-Policy` HTTP response header — the only delivery form
+ * that actually enforces `frame-ancestors`, `report-uri`, and `report-to`.
+ * `scripts/generate-csp.mjs` writes this string, unchanged, to
+ * `apps/shell/dist/csp-headers.txt`.
+ *
+ * @param {Array<{entry: string}>} entries - Manifest entries.
+ * @param {Record<string, string[]>} extra - Extra sources per directive.
+ * @returns {string} A policy string suitable for the CSP header.
+ * @throws {Error} When `extra` would weaken the policy.
+ */
+export function buildCspPolicy(entries, extra) {
+  return buildDirectives(entries, extra)
+    .map(([name, sources]) => `${name} ${sources.join(' ')}`)
+    .join('; ')
+}
+
+/**
+ * Builds the shell's Content-Security-Policy in its **meta** form.
+ *
+ * Identical to {@link buildCspPolicy} except that every directive in
+ * {@link META_IGNORED_DIRECTIVES} is omitted. Emitting those directives in a
+ * `<meta http-equiv="Content-Security-Policy">` tag buys zero protection —
+ * the browser ignores them there — and costs a console error on every page
+ * load. `scripts/generate-csp.mjs` injects this string into
+ * `apps/shell/dist/index.html`.
+ *
+ * @param {Array<{entry: string}>} entries - Manifest entries.
+ * @param {Record<string, string[]>} extra - Extra sources per directive.
+ * @returns {string} A policy string suitable for the meta tag.
+ * @throws {Error} When `extra` would weaken the policy.
+ */
+export function buildCspPolicyForMeta(entries, extra) {
+  return buildDirectives(entries, extra)
+    .filter(([name]) => !META_IGNORED_DIRECTIVES.has(name))
+    .map(([name, sources]) => `${name} ${sources.join(' ')}`)
     .join('; ')
 }
