@@ -1,0 +1,27 @@
+{
+  "$comment": "Reference budget: audits apps/storefront, which scripts/strip-reference.mjs deletes. This file leaves with it — see sentra.referenceConfigs in the root package.json.",
+  "ci": {
+    "collect": {
+      "numberOfRuns": 3,
+      "startServerCommand": "pnpm --filter @sentra/storefront preview --port 4173 --strictPort --host 127.0.0.1",
+      "startServerReadyPattern": "Local",
+      "url": ["http://127.0.0.1:4173/", "http://127.0.0.1:4173/collections/all"],
+      "settings": { "preset": "desktop" }
+    },
+    "assert": {
+      "assertions": {
+        "resource-summary:script:size": ["error", { "maxNumericValue": 400000 }],
+        "resource-summary:stylesheet:size": ["error", { "maxNumericValue": 80000 }],
+        "resource-summary:image:size": ["error", { "maxNumericValue": 500000 }],
+        "resource-summary:total:size": ["error", { "maxNumericValue": 1200000 }],
+        "resource-summary:third-party:count": ["error", { "maxNumericValue": 0 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
+        "total-blocking-time": ["warn", { "maxNumericValue": 300 }],
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
+        "categories:accessibility": ["error", { "minScore": 1 }],
+        "categories:best-practices": ["warn", { "minScore": 0.9 }]
+      }
+    },
+    "upload": { "target": "filesystem", "outputDir": ".lighthouseci" }
+  }
+}

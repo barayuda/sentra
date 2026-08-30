@@ -135,4 +135,69 @@ describe('stripReference', () => {
 
     expect(result.removedDocs).toEqual(['docs/worked-example'])
   })
+
+  it('removes the reference-owned config files the root package.json declares', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sentra-strip-configs-'))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'sentra',
+        sentra: { referenceConfigs: ['lighthouserc.reference.json'] },
+      }),
+    )
+    await writeFile(join(root, 'lighthouserc.reference.json'), '{"ci":{}}\n')
+    await writeFile(join(root, 'lighthouserc.json'), '{"ci":{}}\n')
+
+    const result = await stripReference(root)
+
+    expect(result.removedConfigs).toEqual(['lighthouserc.reference.json'])
+    await expect(readFile(join(root, 'lighthouserc.reference.json'), 'utf8')).rejects.toThrow()
+    await expect(readFile(join(root, 'lighthouserc.json'), 'utf8')).resolves.toContain('ci')
+  })
+
+  it('removes no config files when the root package.json declares none', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sentra-strip-noconfigs-'))
+    await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'sentra' }))
+    await writeFile(join(root, 'lighthouserc.json'), '{"ci":{}}\n')
+
+    const result = await stripReference(root)
+
+    expect(result.removedConfigs).toEqual([])
+    await expect(readFile(join(root, 'lighthouserc.json'), 'utf8')).resolves.toContain('ci')
+  })
+
+  it('removes no config files when referenceConfigs is a string, not an array', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sentra-strip-badconfigs-string-'))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'sentra',
+        sentra: { referenceConfigs: 'lighthouserc.reference.json' },
+      }),
+    )
+    await writeFile(join(root, 'lighthouserc.reference.json'), '{"ci":{}}\n')
+
+    const result = await stripReference(root)
+
+    expect(result.removedConfigs).toEqual([])
+    await expect(readFile(join(root, 'lighthouserc.reference.json'), 'utf8')).resolves.toContain(
+      'ci',
+    )
+  })
+
+  it('drops non-string entries from an otherwise valid referenceConfigs array', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sentra-strip-badconfigs-mixed-'))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'sentra',
+        sentra: { referenceConfigs: ['lighthouserc.reference.json', 42, null] },
+      }),
+    )
+    await writeFile(join(root, 'lighthouserc.reference.json'), '{"ci":{}}\n')
+
+    const result = await stripReference(root)
+
+    expect(result.removedConfigs).toEqual(['lighthouserc.reference.json'])
+  })
 })

@@ -73,6 +73,28 @@ export async function readReferenceDocs(rootDir) {
 }
 
 /**
+ * Reads the reference-owned config files from the root manifest.
+ *
+ * Same shape as {@link readReferenceDocs}: a Lighthouse config that audits a
+ * reference app (e.g. `apps/storefront`) has no `sentra.role` of its own to
+ * carry, so the root declares the list instead. An absent or malformed key
+ * yields an empty list — for a routine whose next act is `rm`, the only safe
+ * reading of "no list" is "delete nothing."
+ *
+ * @param {string} rootDir - Workspace root.
+ * @returns {Promise<string[]>} Repo-relative file paths, or `[]`.
+ */
+export async function readReferenceConfigs(rootDir) {
+  try {
+    const manifest = JSON.parse(await readFile(join(rootDir, 'package.json'), 'utf8'))
+    const declared = manifest?.sentra?.referenceConfigs
+    return Array.isArray(declared) ? declared.filter((file) => typeof file === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+/**
  * Deletes every reference member and prunes the shell's manifest.
  *
  * Destructive by design and never run against a developer's checkout by CI —
@@ -84,12 +106,13 @@ export async function readReferenceDocs(rootDir) {
  * a deleted directory leaves the workspace on its own.
  *
  * @param {string} rootDir - Workspace root.
- * @returns {Promise<{removed: string[], removedDocs: string[]}>} What was deleted.
+ * @returns {Promise<{removed: string[], removedDocs: string[], removedConfigs: string[]}>} What was deleted.
  */
 export async function stripReference(rootDir) {
   const members = await readWorkspaceMembers(rootDir)
   const reference = members.filter((member) => member.role === 'reference')
   const referenceDocs = await readReferenceDocs(rootDir)
+  const referenceConfigs = await readReferenceConfigs(rootDir)
 
   /* The manifest names federation containers ("storefront"), not package names
      ("@sentra/storefront"), so match on the last path segment of the member
@@ -132,17 +155,25 @@ export async function stripReference(rootDir) {
     await rm(join(rootDir, dir), { recursive: true, force: true })
   }
 
-  return { removed: reference.map((member) => member.dir), removedDocs: referenceDocs }
+  for (const file of referenceConfigs) {
+    await rm(join(rootDir, file), { recursive: true, force: true })
+  }
+
+  return {
+    removed: reference.map((member) => member.dir),
+    removedDocs: referenceDocs,
+    removedConfigs: referenceConfigs,
+  }
 }
 
 /** Strips the current working tree. */
 async function main() {
-  const { removed, removedDocs } = await stripReference(process.cwd())
-  if (removed.length === 0 && removedDocs.length === 0) {
+  const { removed, removedDocs, removedConfigs } = await stripReference(process.cwd())
+  if (removed.length === 0 && removedDocs.length === 0 && removedConfigs.length === 0) {
     console.log('strip-reference: nothing to remove')
     return
   }
-  for (const dir of [...removed, ...removedDocs]) {
+  for (const dir of [...removed, ...removedDocs, ...removedConfigs]) {
     console.log(`strip-reference: removed ${dir}`)
   }
 }

@@ -20,7 +20,9 @@
     "verify:sourcemaps": "node scripts/check-sourcemaps.mjs",
     "verify:bundle-size": "node scripts/check-bundle-size.mjs",
     "verify:audit": "node scripts/check-audit.mjs",
-    "verify:csp": "node scripts/generate-csp.mjs"
+    "verify:csp": "node scripts/generate-csp.mjs",
+    "verify:lighthouse": "lhci autorun --config=lighthouserc.json",
+    "verify:lighthouse:reference": "lhci autorun --config=lighthouserc.reference.json"
   },
   "devDependencies": {
     "@lhci/cli": "0.15.1",
@@ -39,6 +41,9 @@
   "sentra": {
     "referenceDocs": [
       "docs/prd-feasibility"
+    ],
+    "referenceConfigs": [
+      "lighthouserc.reference.json"
     ]
   }
 }
