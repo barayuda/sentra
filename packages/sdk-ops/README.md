@@ -1,5 +1,7 @@
 # @sentra/sdk-ops
 
+**Role:** reference implementation — safe to delete. See [the removal procedure](../../docs/proposal/README.md#adopting-it).
+
 ## What it does
 
 A typed client for the console's ops backend — orders and feature flags — mock-first via

@@ -2,6 +2,9 @@
   "name": "@sentra/result",
   "version": "0.0.0",
   "private": true,
+  "sentra": {
+    "role": "platform"
+  },
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

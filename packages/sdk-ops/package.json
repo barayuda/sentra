@@ -2,6 +2,9 @@
   "name": "@sentra/sdk-ops",
   "version": "0.0.0",
   "private": true,
+  "sentra": {
+    "role": "reference"
+  },
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

@@ -67,4 +67,51 @@ describe('parseRemoteManifest', () => {
     if (!result.ok) throw new Error('expected ok')
     expect(result.value.entries).toEqual([local])
   })
+
+  it('carries an integrity hash through when it is well formed', () => {
+    const result = parseRemoteManifest([
+      {
+        name: 'a',
+        entry: 'https://example.test/remoteEntry.js',
+        basePath: '/a',
+        integrity: `sha384-${'A'.repeat(64)}`,
+      },
+    ])
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.entries[0]!.integrity).toBe(`sha384-${'A'.repeat(64)}`)
+  })
+
+  it('leaves integrity undefined when the field is absent', () => {
+    const result = parseRemoteManifest([
+      { name: 'a', entry: 'https://example.test/remoteEntry.js', basePath: '/a' },
+    ])
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.entries[0]!.integrity).toBeUndefined()
+  })
+
+  it('rejects an entry whose integrity is not a sha384 digest', () => {
+    const result = parseRemoteManifest([
+      {
+        name: 'a',
+        entry: 'https://example.test/remoteEntry.js',
+        basePath: '/a',
+        integrity: 'md5-abc',
+      },
+    ])
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.entries).toHaveLength(0)
+    expect(result.value.rejected[0]!.reason).toContain('integrity')
+  })
+
+  it('rejects an entry whose integrity is present but empty', () => {
+    const result = parseRemoteManifest([
+      { name: 'a', entry: 'https://example.test/remoteEntry.js', basePath: '/a', integrity: '' },
+    ])
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.entries).toHaveLength(0)
+  })
 })

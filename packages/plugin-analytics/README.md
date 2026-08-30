@@ -1,5 +1,7 @@
 # @sentra/plugin-analytics
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it does
 
 Schema-validated, allowlist-only analytics as a genuine Vue plugin — installed with

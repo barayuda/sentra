@@ -47,6 +47,15 @@ jobs:
       - name: Check sourcemaps are emitted
         run: pnpm verify:sourcemaps
 
+      - name: Check bundle sizes
+        run: pnpm verify:bundle-size
+
+      - name: Audit dependencies
+        run: pnpm verify:audit
+
+      - name: Check the generated CSP
+        run: pnpm verify:csp
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -140,8 +149,13 @@ jobs:
       # sdk-commerce's build step generates the types the app imports, so the
       # workspace build must run before the app can be built by Playwright's
       # webServer command.
+      #
+      # VITE_SENTRA_MOCKS is set here, not in the Playwright webServer command,
+      # so the build happens exactly once per job. It is declared in
+      # turbo.json's `build` task env, without which Turborepo's strict
+      # environment mode would drop it before Vite ever saw it.
       - name: Build workspace packages
-        run: pnpm build
+        run: VITE_SENTRA_MOCKS=true pnpm build
 
       - name: Run E2E smoke tests
         run: pnpm --filter @sentra/storefront e2e
@@ -183,8 +197,13 @@ jobs:
       # sdk-commerce generates types at build time and the shell's E2E config
       # builds all three apps itself, so the workspace packages must exist
       # first — same ordering constraint as the storefront's e2e job.
+      #
+      # VITE_SENTRA_MOCKS is set here, not in the Playwright webServer command,
+      # so the build happens exactly once per job. It is declared in
+      # turbo.json's `build` task env, without which Turborepo's strict
+      # environment mode would drop it before Vite ever saw it.
       - name: Build workspace packages
-        run: pnpm build
+        run: VITE_SENTRA_MOCKS=true pnpm build
 
       - name: Run federated E2E tests
         run: pnpm --filter @sentra/shell e2e
@@ -194,5 +213,149 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: federation-playwright-report
+          path: apps/shell/playwright-report
+          retention-days: 7
+
+  # Resource budgets are enforced; lab timing metrics are reported only.
+  # A timing threshold on a shared CI runner produces failures nobody trusts,
+  # and an untrusted gate acquires `continue-on-error: true` and never fails
+  # again. Enforcing only the deterministic half is what keeps this gate alive.
+  # Named risk area: performance regression.
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Mocks make the run self-contained: no network dependency, so a budget
+      # failure is always about this build and never about someone else's API.
+      - name: Build
+        run: VITE_SENTRA_MOCKS=true pnpm build
+
+      # The `verify` job's bundle-size check runs against a *different* dist:
+      # its `Build` step above uses `pnpm build` with no VITE_SENTRA_MOCKS, and
+      # `turbo.json`'s `env: ["VITE_SENTRA_MOCKS"]` entry makes that a distinct
+      # cache key from this job's mocked build (see task-8-report.md, Step 1b).
+      # Two jobs, two artifacts: `verify:bundle-size` protecting one does
+      # nothing for the other. This step re-runs the same floor check against
+      # the artifact Lighthouse is actually about to measure.
+      - name: Check bundle sizes
+        run: pnpm verify:bundle-size
+
+      # The platform budget. This one runs in every tree, stripped or not.
+      - name: Run Lighthouse CI (platform)
+        run: pnpm verify:lighthouse
+
+      # The reference budget leaves with apps/storefront. Guarding on the file
+      # rather than skipping the step outright keeps the full tree honest: in a
+      # tree that still has the storefront, a missing config is a wiring bug and
+      # this step must run. Do NOT reach for `continue-on-error` here — that
+      # turns both halves into decoration.
+      - name: Run Lighthouse CI (reference)
+        run: |
+          if [ -f lighthouserc.reference.json ]; then
+            pnpm verify:lighthouse:reference
+          else
+            echo "no lighthouserc.reference.json: platform-only tree, nothing to audit"
+          fi
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci
+          retention-days: 7
+
+  # Proves the claim the proposal leads with: the reference implementation is
+  # deletable. The examples are removed, the lockfile is regenerated, and the
+  # platform must still build, typecheck, lint, test, and — the browser step
+  # below — actually run. A base template whose examples cannot be removed
+  # cleanly is not a template — it is a fork you inherit. Named risk area:
+  # none; this is a maintainability gate.
+  platform-only:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Check every member declares a role
+        run: node scripts/workspace.mjs --check
+
+      - name: Delete the reference implementation
+        run: node scripts/strip-reference.mjs
+
+      # --no-frozen-lockfile is correct here and only here: removing workspace
+      # members necessarily changes the lockfile, so the frozen check that
+      # every other job relies on would fail by construction.
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # VITE_SENTRA_MOCKS=true here, not a plain `pnpm build`: every other
+      # place lighthouserc.json's shell budgets are calibrated or verified
+      # forces the mocked build (see its own $comment and task-8-report.md's
+      # Step 1b), and apps/shell/src/mocks/enabled.ts gates MSW on a
+      # statically-inlined env check that Vite tree-shakes on either value.
+      # An unmocked build here measured a genuinely smaller artifact (125576
+      # script bytes on a stripped tree) than a mocked one (276656) -- still
+      # under budget either way today, but the wrong artifact shape to be
+      # comparing against a mocked-build baseline. This also matches the
+      # build Playwright's own webServer.command below already forces for the
+      # same reason.
+      - name: Build
+        run: VITE_SENTRA_MOCKS=true pnpm build
+
+      # The platform gate is the boundary this whole milestone claims is real.
+      # Running it here, on every stripped-tree CI execution, is what keeps
+      # that claim continuously true instead of true-once-in-a-throwaway-clone.
+      - name: Run Lighthouse CI (platform)
+        run: pnpm verify:lighthouse
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      # Everything above proves the stripped tree compiles; none of it loads a
+      # page. This is the step that closed the gap a Critical finding shipped
+      # through: a runtime-only module-resolution defect that every prior step
+      # in this job was structurally unable to see. `VITE_SENTRA_MOCKS=true` is
+      # the configuration that broke — see `e2e-platform-only/*.spec.ts`.
+      - name: Install Playwright browser
+        run: pnpm --filter @sentra/shell exec playwright install --with-deps chromium
+
+      - name: Smoke-check the stripped shell boots in a browser
+        run: pnpm --filter @sentra/shell e2e:platform-only
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: platform-only-playwright-report
           path: apps/shell/playwright-report
           retention-days: 7

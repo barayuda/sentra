@@ -1,0 +1,86 @@
+{
+  "$comment": "Reference budget, deleted with apps/storefront by scripts/strip-reference.mjs. Baseline derivation, the route/image fixes, the accessibility pin, and every limitation of this gate are documented in docs/adr/0009-gate-policy.md — see that file before changing a number here.",
+  "ci": {
+    "collect": {
+      "numberOfRuns": 3,
+      "startServerCommand": "pnpm --filter @sentra/storefront preview --port 4173 --strictPort --host 127.0.0.1",
+      "startServerReadyPattern": "Local",
+      "url": ["http://127.0.0.1:4173/", "http://127.0.0.1:4173/products/sentra-piece-2"],
+      "settings": {
+        "preset": "desktop"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "resource-summary:script:size": [
+          "error",
+          {
+            "maxNumericValue": 354816
+          }
+        ],
+        "resource-summary:stylesheet:size": [
+          "error",
+          {
+            "maxNumericValue": 5632
+          }
+        ],
+        "resource-summary:image:size": [
+          "error",
+          {
+            "maxNumericValue": 500000
+          }
+        ],
+        "resource-summary:total:size": [
+          "error",
+          {
+            "maxNumericValue": 863516
+          }
+        ],
+        "resource-summary:third-party:count": [
+          "error",
+          {
+            "maxNumericValue": 22
+          }
+        ],
+        "largest-contentful-paint": [
+          "warn",
+          {
+            "maxNumericValue": 1400
+          }
+        ],
+        "total-blocking-time": [
+          "warn",
+          {
+            "maxNumericValue": 50
+          }
+        ],
+        "cumulative-layout-shift": [
+          "warn",
+          {
+            "maxNumericValue": 0.35
+          }
+        ],
+        "categories:accessibility": [
+          "error",
+          {
+            "minScore": 0.98
+          }
+        ],
+        "categories:best-practices": [
+          "warn",
+          {
+            "minScore": 0.9
+          }
+        ]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
+    }
+  },
+  "domSizeFloor": {
+    "http://127.0.0.1:4173/": 100,
+    "http://127.0.0.1:4173/products/sentra-piece-2": 15
+  }
+}

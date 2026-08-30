@@ -1,9 +1,20 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "security/csp-sources.json",
+    "scripts/csp.mjs",
+    "scripts/generate-csp.mjs",
+    "scripts/hash-remotes.mjs"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "env": ["VITE_SENTRA_MOCKS"]
+    },
+    "@sentra/sdk-commerce#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["src/generated/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"]

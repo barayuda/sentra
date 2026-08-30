@@ -8,6 +8,19 @@ export interface RemoteManifestEntry {
   readonly entry: string
   /** URL prefix this remote's routes are mounted under, e.g. `/ops`. */
   readonly basePath: string
+  /**
+   * Expected SHA-384 digest of the entry script, in Subresource Integrity
+   * form (`sha384-<base64>`).
+   *
+   * Optional, because a platform with no integrity data must still boot — a
+   * manifest is edited by operators in a deployed `dist/`, and a hard
+   * requirement would turn a forgotten field into a total outage. This type
+   * permits an entry with no digest; it says nothing about whether the
+   * runtime will register one — that is `apps/shell/src/registry/integrity.ts`'s
+   * decision, not this module's. The two layers are stated separately, with
+   * which one governs at runtime, in ADR 0008.
+   */
+  readonly integrity?: string
 }
 
 /** An entry that was dropped, and why. */
@@ -96,6 +109,26 @@ function basePathProblem(value: unknown): string | null {
   return null
 }
 
+/** SRI digest form this platform accepts. SHA-384 only — see ADR 0008. */
+const INTEGRITY_PATTERN = /^sha384-[A-Za-z0-9+/]{64}={0,2}$/
+
+/**
+ * Validates an optional integrity digest.
+ *
+ * Absent is fine. Present-but-malformed is not: a hash that cannot be checked
+ * is worse than no hash, because it reads as protection that is not there.
+ *
+ * @param value - Candidate digest, or undefined.
+ * @returns The reason it is unusable, or null when it is fine.
+ */
+function integrityProblem(value: unknown): string | null {
+  if (value === undefined) return null
+  if (typeof value !== 'string' || !INTEGRITY_PATTERN.test(value)) {
+    return `integrity must be a sha384 SRI digest, got "${String(value)}"`
+  }
+  return null
+}
+
 /**
  * Parses and validates a remote registry document.
  *
@@ -143,6 +176,11 @@ export function parseRemoteManifest(input: unknown): Result<ParsedManifest, Mani
       reject(pathProblem)
       return
     }
+    const integrity = integrityProblem(record.integrity)
+    if (integrity !== null) {
+      reject(integrity)
+      return
+    }
 
     const name = record.name.trim()
     const basePath = record.basePath as string
@@ -157,7 +195,12 @@ export function parseRemoteManifest(input: unknown): Result<ParsedManifest, Mani
 
     seenNames.add(name)
     seenBasePaths.add(basePath)
-    entries.push({ name, entry: record.entry as string, basePath })
+    entries.push({
+      name,
+      entry: record.entry as string,
+      basePath,
+      ...(record.integrity === undefined ? {} : { integrity: record.integrity as string }),
+    })
   })
 
   return ok({ entries, rejected })

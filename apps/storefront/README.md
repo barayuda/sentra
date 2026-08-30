@@ -1,5 +1,7 @@
 # @sentra/storefront
 
+**Role:** reference implementation — safe to delete. See [the removal procedure](../../docs/proposal/README.md#adopting-it).
+
 ## Running it
 
 ```bash
@@ -58,7 +60,7 @@ does the same. Then boot the shell (`apps/shell/README.md`), which fetches
 `http://127.0.0.1:4173/remoteEntry.js` per `apps/shell/public/remotes.json` and mounts
 this app's routes under `/shop`.
 
-Two things change under the shell, and nothing else does:
+What changes under the shell, and nothing else does:
 
 - **The header.** `apps/shell/src/components/ShellHeader.vue` owns navigation and the
   cart badge when this app runs under the shell; `AppHeader.vue` above still owns the
@@ -77,7 +79,7 @@ origin rather than reflecting every origin that asks. Named risk area: access co
 
 ## Architecture
 
-Two routes (`src/router.ts`):
+The routes (`src/router.ts`):
 
 | Path                | Name         | View                 |
 | ------------------- | ------------ | -------------------- |
@@ -153,7 +155,7 @@ content.
   drawer, confirm checkout hands off to Shopify — also asserts that the sanitiser genuinely
   neutralises a hostile description in a real browser: the authoritative proof
   `sanitize.ts`'s own JSDoc claims, since unit tests alone run under jsdom, not a browser.
-  Two further specs extend it on paths already exhaustively unit-tested but never proven
+  Further specs extend it on paths already exhaustively unit-tested but never proven
   wired together: that the cart survives an in-app route change (not a hard reload — the
   mock cart backend has no persistence layer, which is this mock-first architecture's
   honest limitation, not a bug), and that a failed add-to-cart shows a recoverable toast

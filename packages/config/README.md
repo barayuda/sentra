@@ -1,9 +1,11 @@
 # @sentra/config
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it does
 
 Holds the tool configuration every Sentra package inherits, so rules are defined once
-rather than copied per package. Two things ship here: a base `tsconfig` and a Vitest
+rather than copied per package. What ships here: a base `tsconfig` and a Vitest
 config factory.
 
 ## How to use it
@@ -36,9 +38,12 @@ A few base-config choices are load-bearing and will surprise you if you fight th
 - `allowImportingTsExtensions` is on, so relative imports write the literal extension
   (`./flatten.ts`). This is required because `@sentra/tokens` executes a build script
   through `node`, whose native type stripping does no extension resolution.
-- `noEmit` is on, which is what makes the flag above legal. TypeScript never emits in this
-  repository: Vite emits JavaScript, `vite-plugin-dts` emits declarations, and every
-  `typecheck` script is `--noEmit`.
+- `noEmit` is on, which is what makes the flag above legal. Vite emits JavaScript and every
+  `typecheck` script is `--noEmit`. The single emitting configuration is
+  `packages/ui/tsconfig.build.json`, which overrides `noEmit` so `vue-tsc` can write
+  `@sentra/ui`'s declarations; it is invoked directly from that package's `build` script
+  rather than through a Vite plugin, because a plugin running plain `tsc` cannot resolve
+  `*.vue` imports and skipped every single-file component.
 - Root `typescript` is pinned to `7.0.2`, but `packages/ui`'s `typescript` devDependency is
   aliased to `npm:@typescript/typescript6@6.0.2` — `vue-tsc` cannot run against TS7's Go
   compiler yet. The root `.pnpmfile.cjs` applies the same TS6 alias to

@@ -1,10 +1,12 @@
 # @sentra/sdk-commerce
 
+**Role:** reference implementation — safe to delete. See [the removal procedure](../../docs/proposal/README.md#adopting-it).
+
 ## What it is
 
 A typed Shopify Storefront client, mock-first. It talks GraphQL to Shopify's Storefront
 API, but nothing that imports this package's main entry needs to know that: every call
-returns a `Result<T, StorefrontError>` built from four named failure kinds, never a thrown
+returns a `Result<T, StorefrontError>` built from named failure kinds, never a thrown
 string, and the whole thing runs against MSW fixtures with no network and no live store.
 
 ## Layering
@@ -94,7 +96,7 @@ const transport = createStorefrontTransport({
 ```
 
 When a request is throttled, the retry delay is not a blind backoff. `retryDelayMs`
-computes two candidates and takes whichever is longer:
+computes both candidates and takes whichever is longer:
 
 - ordinary exponential backoff (500ms base, doubling, capped at 4000ms), and
 - when Shopify reported a `throttleStatus`, the arithmetic answer: the cost deficit
@@ -140,12 +142,12 @@ a reviewer seeing a deliberate suppression.
 ## Mocks
 
 `@sentra/sdk-commerce/mocks` is a public subpath, not a test-only helper, because the same
-MSW handlers serve three consumers: this package's own contract tests
+MSW handlers serve every consumer: this package's own contract tests
 (`src/mocks/contract.test.ts`), the storefront's dev server, and the storefront's demo
 build. One fixture set means the demo cannot drift from what the tests prove.
 
 `createMockControl()` returns a mutable `{ scenario, latencyMs }` object passed to
-`createStorefrontHandlers`. Five scenarios:
+`createStorefrontHandlers`. The scenarios:
 
 | `scenario`       | Produces                                                                      |
 | ---------------- | ----------------------------------------------------------------------------- |

@@ -1,0 +1,85 @@
+{
+  "$comment": "Platform budget. Baseline derivation, both legitimate CI pages, the build-env fix, and every limitation of this gate are documented in docs/adr/0009-gate-policy.md — see that file before changing a number here.",
+  "ci": {
+    "collect": {
+      "numberOfRuns": 3,
+      "startServerCommand": "pnpm --filter @sentra/shell exec vite preview --port 4175 --strictPort --host 127.0.0.1",
+      "startServerReadyPattern": "Local",
+      "url": ["http://127.0.0.1:4175/"],
+      "settings": {
+        "preset": "desktop"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "resource-summary:script:size": [
+          "error",
+          {
+            "maxNumericValue": 400000
+          }
+        ],
+        "resource-summary:stylesheet:size": [
+          "error",
+          {
+            "maxNumericValue": 5632
+          }
+        ],
+        "resource-summary:image:size": [
+          "error",
+          {
+            "maxNumericValue": 0
+          }
+        ],
+        "resource-summary:total:size": [
+          "error",
+          {
+            "maxNumericValue": 410000
+          }
+        ],
+        "resource-summary:third-party:count": [
+          "error",
+          {
+            "maxNumericValue": 0
+          }
+        ],
+        "largest-contentful-paint": [
+          "warn",
+          {
+            "maxNumericValue": 800
+          }
+        ],
+        "total-blocking-time": [
+          "warn",
+          {
+            "maxNumericValue": 50
+          }
+        ],
+        "cumulative-layout-shift": [
+          "warn",
+          {
+            "maxNumericValue": 0.02
+          }
+        ],
+        "categories:accessibility": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "categories:best-practices": [
+          "warn",
+          {
+            "minScore": 0.9
+          }
+        ]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
+    }
+  },
+  "domSizeFloor": {
+    "http://127.0.0.1:4175/": 14
+  }
+}

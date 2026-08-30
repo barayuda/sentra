@@ -11,19 +11,27 @@ const analytics = useAnalytics()
 const flags = ref<FeatureFlag[]>([])
 const error = shallowRef<OpsError | null>(null)
 const loading = ref(false)
+/** Whether a load has completed at least once, successfully or not. */
+const loaded = ref(false)
 /** Keys with a write in flight, so a second click cannot race the first. */
 const pending = ref(new Set<string>())
 
-/** Loads every flag. */
+/**
+ * Loads every flag.
+ *
+ * Clears the previous error before requesting, so a retry that succeeds does
+ * not leave a stale alert on screen next to fresh data.
+ */
 async function load(): Promise<void> {
   loading.value = true
+  error.value = null
   const result = await ops.listFlags()
   loading.value = false
+  loaded.value = true
   if (!result.ok) {
     error.value = result.error
     return
   }
-  error.value = null
   flags.value = [...result.value]
 }
 
@@ -84,11 +92,30 @@ void load()
       class="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800"
     >
       {{ error.message }}
+      <button
+        type="button"
+        data-testid="flags-retry"
+        class="ml-2 rounded border border-red-400 px-2 py-1 font-medium underline"
+        @click="load()"
+      >
+        Retry
+      </button>
     </p>
 
-    <p v-if="loading" class="text-sm text-slate-500">Loading…</p>
+    <p v-if="loading" data-testid="flags-loading" class="text-sm text-slate-500">Loading…</p>
 
-    <ul class="space-y-3">
+    <!-- Empty is not the same as loading, and neither is the same as failed.
+         Rendering nothing for all three tells an operator that the console is
+         broken when in fact there is simply nothing configured. -->
+    <p
+      v-else-if="loaded && !error && flags.length === 0"
+      data-testid="flags-empty"
+      class="text-sm text-slate-500"
+    >
+      No feature flags are configured.
+    </p>
+
+    <ul v-else class="space-y-3">
       <li v-for="flag in flags" :key="flag.key" class="flex items-center gap-3">
         <Checkbox
           :label="flag.label"

@@ -1,0 +1,23 @@
+{
+  "$comment": "Gzipped byte budgets per app. Two kinds of key: glob patterns, matched against paths relative to the app's dist/ directory (* does not cross a path separator); and $-prefixed aggregate totals ($total:js, $total:css), which sum gzipped bytes across every measured file of that extension regardless of name. $total exists because most bundle weight lives in bundler-generated chunk names (module-federation virtual modules, vendor splits) that no glob can name stably; a total is rename-proof where a pattern is not. Any key beginning with $ is reserved for a recognised total (currently only $total:js and $total:css) -- it can never be used as a literal glob pattern, and an app whose budgets contain any other $-prefixed key (a typo such as $total:jss, or a plausible future addition that was never wired up) fails loudly naming the bad key, whether or not that app was built. Source maps (*.map) are excluded from every measurement, including the totals -- they are verified separately by verify:sourcemaps. An app directory that is not present is skipped (deleting the reference half is supported), but a run that measures no app at all fails, and so does a $total that summed zero files. Regenerate the numbers with: pnpm build && node scripts/check-bundle-size.mjs --report. Rule for setting a budget from a measurement: round the measured gzipped byte count up to the next whole kilobyte (1 KB = 1024 bytes, i.e. ceil(bytes / 1024) * 1024), then add 10 percent headroom (* 1.1), then round any fractional byte up. Measured 2026-08-30 from a forced build (entry patterns): storefront index.js 4814B -> 5120B -> 5632B; storefront css 4761B -> 5120B -> 5632B; shell index.js 4220B -> 5120B -> 5632B; shell css 4444B -> 5120B -> 5632B; console index.js 4350B -> 5120B -> 5632B; console css 4510B -> 5120B -> 5632B. All six land in the same 4-5KB band by coincidence of the apps sharing near-identical entry/shell scaffolding, not because the rule was fudged to match. Measured 2026-08-30 from the same build (totals, .map excluded): storefront $total:js 308816B -> 309248B -> 340173B; storefront $total:css 4761B -> 5120B -> 5632B (one css file, same as the entry pattern); shell $total:js 282795B -> 283648B -> 312013B; shell $total:css 4444B -> 5120B -> 5632B; console $total:js 284512B -> 284672B -> 313140B; console $total:css 4510B -> 5120B -> 5632B. Shell's $total:js includes an MSW browser chunk reached only via a dynamic import() behind a dead branch in a production build (registry/boot.ts:71) -- it is emitted but never fetched, so it inflates this budget but is not a runtime cost; if that dead code is ever removed, re-measure and lower shell's $total:js.",
+  "apps": {
+    "apps/storefront": {
+      "assets/index-*.js": 5632,
+      "assets/*.css": 5632,
+      "$total:js": 340173,
+      "$total:css": 5632
+    },
+    "apps/shell": {
+      "assets/index-*.js": 5632,
+      "assets/*.css": 5632,
+      "$total:js": 312013,
+      "$total:css": 5632
+    },
+    "apps/console": {
+      "assets/index-*.js": 5632,
+      "assets/*.css": 5632,
+      "$total:js": 313140,
+      "$total:css": 5632
+    }
+  }
+}

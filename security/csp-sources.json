@@ -1,0 +1,19 @@
+{
+  "$comment": "Origins the shell must allow on behalf of code inside its remotes. The shell cannot derive these from remotes.json: they belong to the remotes' own configuration, not to the manifest. Only connect-src, img-src, font-src and media-src may be widened here — scripts/csp.mjs refuses anything else, and refuses wildcards, non-https origins, and sources carrying a path. Every entry declares an owner: \"reference\" entries are removed by scripts/strip-reference.mjs along with the apps that needed them, so a platform-only tree does not keep permitting origins nothing contacts. Replace these with your own before deploying.",
+  "connect-src": {
+    "https://demo-shop.myshopify.com": {
+      "owner": "reference",
+      "reason": "Storefront commerce API. Set from VITE_SENTRA_SHOPIFY_DOMAIN (apps/storefront/src/storefront.ts), defaulting to the mock shop in packages/sdk-commerce/src/mocks/fixtures.ts. Required even in mocked builds: CSP is enforced on the request's declared URL, before a Service Worker can intercept it."
+    },
+    "https://ops.sentra.test": {
+      "owner": "reference",
+      "reason": "Console ops backend. Hardcoded as OPS_MOCK_BASE_URL in packages/sdk-ops/src/mocks/fixtures.ts and read by apps/console/src/ops.ts's createOpsClient() call — unlike the storefront, the console has no env-var override. Found by Task 6's federated E2E run against the console's real, authenticated OrdersView (past the role guard), which the Task 1 spike never reached: a connect-src violation blocked https://ops.sentra.test/api/v1/orders."
+    }
+  },
+  "img-src": {
+    "https://cdn.shopify.com": {
+      "owner": "reference",
+      "reason": "Product image CDN referenced by commerce API responses."
+    }
+  }
+}

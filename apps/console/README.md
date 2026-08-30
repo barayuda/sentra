@@ -1,12 +1,14 @@
 # @sentra/console
 
+**Role:** reference implementation — safe to delete. See [the removal procedure](../../docs/proposal/README.md#adopting-it).
+
 ## What it is
 
 The ops console: an orders table and feature-flag toggles, built on `@sentra/sdk-ops`.
 It is deliberately a different application shape from `apps/storefront` — no cart, no
 product catalogue, a REST-shaped backend instead of a GraphQL one — so the shell's
-composition is proven against two remotes that don't look alike, not two storefronts
-side by side.
+composition is proven against remotes that don't look alike, not storefronts side by
+side.
 
 ## How you use it
 

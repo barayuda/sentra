@@ -1,5 +1,7 @@
 # @sentra/shell-contract
 
+**Role:** platform core — kept when the reference implementation is removed.
+
 ## What it does
 
 The contract between `apps/shell` and every remote it can mount — currently
@@ -32,14 +34,14 @@ const myRemote = {
 export default myRemote
 ```
 
-`register`'s second argument, `RemoteContext`, hands the remote two things: `ctx.bus`, the
+`register`'s second argument, `RemoteContext`, hands the remote `ctx.bus`, the
 shell's live `ShellBus` instance, and `ctx.basePath`, the URL prefix the manifest mounted
 this remote under. `register` is the one call both modes share — the shell calls it once
 per remote before mounting its own `App`, and each remote's own standalone `main.ts` calls
 the identical function to boot itself, which is what keeps a federated regression from
 also failing that remote's own dev server and its own end-to-end suite.
 
-`ShellEventMap` (`src/bus.ts`) is a **closed** map — four events, with no
+`ShellEventMap` (`src/bus.ts`) is a **closed** map, with no
 `emit(name: string, data: unknown)` escape hatch a call site could invent at runtime:
 
 | Event                 | Payload                            | Carries                                              |

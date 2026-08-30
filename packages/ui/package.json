@@ -2,6 +2,9 @@
   "name": "@sentra/ui",
   "version": "0.0.0",
   "private": true,
+  "sentra": {
+    "role": "platform"
+  },
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -11,7 +14,7 @@
     "./styles.css": "./src/styles.css"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vue-tsc -p tsconfig.build.json",
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit",
@@ -48,7 +51,6 @@
     "tailwindcss": "4.3.3",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vite": "8.2.2",
-    "vite-plugin-dts": "5.0.3",
     "vitest": "4.1.11",
     "vue": "3.5.42",
     "vue-tsc": "3.3.11",

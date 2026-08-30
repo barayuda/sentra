@@ -1,5 +1,10 @@
 import { HttpResponse, delay, http, type RequestHandler } from 'msw'
-import { FIXTURE_COLLECTION, FIXTURE_PRODUCTS, type WireProduct } from './fixtures.ts'
+import {
+  FIXTURE_COLLECTION,
+  FIXTURE_PRODUCTS,
+  MOCK_PRODUCT_IMAGE_BASE64,
+  type WireProduct,
+} from './fixtures.ts'
 import {
   addMockLines,
   createMockCart,
@@ -38,6 +43,30 @@ export function createMockControl(): MockControl {
 
 /** Any Storefront GraphQL endpoint, whatever the shop domain or API version. */
 const STOREFRONT_ENDPOINT = /\/api\/\d{4}-\d{2}\/graphql\.json$/
+
+/**
+ * Every fixture product image, e.g.
+ * `https://cdn.shopify.com/s/files/1/0001/sentra-piece-3.jpg?width=600`.
+ *
+ * Deliberately unanchored at the end: `shopifyImageUrl`/`shopifyImageSrcset`
+ * append a `?width=`/`?height=`/`?crop=` query string, and MSW's `http.get`
+ * matches a `RegExp` pattern against the full request URL, query included.
+ */
+const FIXTURE_IMAGE = /^https:\/\/cdn\.shopify\.com\/s\/files\/1\/0001\/sentra-piece-\d+\.jpg/
+
+/**
+ * Decodes base64 to bytes without a Node-only API.
+ *
+ * These handlers run both in Node (contract tests, `msw/node`) and inside a
+ * browser Service Worker (`msw/browser`, no `Buffer` global) — `atob` is the
+ * one decoder both environments expose.
+ */
+function decodeBase64(base64: string): Uint8Array {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
 
 /** Cost accounting shape shared by every successful mock response. */
 interface CostExtensions {
@@ -140,6 +169,22 @@ export function createStorefrontHandlers(
   control: MockControl = createMockControl(),
 ): RequestHandler[] {
   return [
+    /*
+     * Fixture product images. Without this, `shopifyImageUrl`/
+     * `shopifyImageSrcset` (real client code, not a test artifact) build a
+     * genuine `cdn.shopify.com` URL that these fixtures don't own, and the
+     * request falls through MSW to the real network and 404s. That is what
+     * happened before this handler existed: 20 failed image loads on the
+     * storefront home page. The bytes returned here carry no meaning beyond
+     * being a valid, reasonably-sized PNG — see {@link MOCK_PRODUCT_IMAGE_BASE64}.
+     */
+    http.get(FIXTURE_IMAGE, () => {
+      return new HttpResponse(decodeBase64(MOCK_PRODUCT_IMAGE_BASE64), {
+        status: 200,
+        headers: { 'Content-Type': 'image/png' },
+      })
+    }),
+
     http.post(STOREFRONT_ENDPOINT, async ({ request }) => {
       if (control.latencyMs > 0) await delay(control.latencyMs)
       if (control.scenario === 'network') return HttpResponse.error()
