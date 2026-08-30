@@ -89,8 +89,12 @@ describe('the stripped-tree case end to end', () => {
     const apps = await appsRequiringSourcemaps(root)
     const failures = await checkSourcemaps(apps.map((dir) => join(root, dir)))
 
+    /* Assert the reference apps are absent from `apps`, not from `failures`.
+       An assertion that `failures` mentions no reference app holds identically
+       whether or not the fix works, because the line above already requires
+       `failures` to be empty and an empty list mentions nothing. `apps` is the
+       value the fix actually changes, so it is the one worth asserting on. */
+    expect(apps).toEqual(['apps/shell'])
     expect(failures).toEqual([])
-    expect(failures.join(' ')).not.toContain('storefront')
-    expect(failures.join(' ')).not.toContain('console')
   })
 })

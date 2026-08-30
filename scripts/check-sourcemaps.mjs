@@ -88,7 +88,17 @@ async function main() {
     for (const failure of failures) console.error(`sourcemap check failed: ${failure}`)
     process.exit(1)
   }
-  console.log(`sourcemap check passed for ${apps.length} apps`)
+
+  /* A loop over zero apps collects zero failures, so "passed for 0 apps" would
+     report a control that ran when nothing was checked. `hash-remotes.mjs`
+     settled this shape already and this follows it: say plainly that nothing
+     was inspected. It does not exit non-zero, because a workspace can legally
+     contain no apps; what it must not do is look like a passing check. */
+  if (apps.length === 0) {
+    console.log('sourcemap check inspected no apps: the workspace declares none under apps/.')
+    return
+  }
+  console.log(`sourcemap check passed for ${apps.length} app${apps.length === 1 ? '' : 's'}`)
 }
 
 if (process.argv[1]?.endsWith('check-sourcemaps.mjs')) await main()
