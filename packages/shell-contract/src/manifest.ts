@@ -14,9 +14,11 @@ export interface RemoteManifestEntry {
    *
    * Optional, because a platform with no integrity data must still boot — a
    * manifest is edited by operators in a deployed `dist/`, and a hard
-   * requirement would turn a forgotten field into a total outage. An entry
-   * *with* a hash is verified; an entry without one is trusted, and that
-   * asymmetry is stated plainly in ADR 0008 rather than hidden.
+   * requirement would turn a forgotten field into a total outage. This type
+   * permits an entry with no digest; it says nothing about whether the
+   * runtime will register one — that is `apps/shell/src/registry/integrity.ts`'s
+   * decision, not this module's. The two layers are stated separately, with
+   * which one governs at runtime, in ADR 0008.
    */
   readonly integrity?: string
 }
