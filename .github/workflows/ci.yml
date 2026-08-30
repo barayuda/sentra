@@ -199,9 +199,10 @@ jobs:
 
   # Proves the claim the proposal leads with: the reference implementation is
   # deletable. The examples are removed, the lockfile is regenerated, and the
-  # platform must still build, typecheck, lint and test. A base template whose
-  # examples cannot be removed cleanly is not a template — it is a fork you
-  # inherit. Named risk area: none; this is a maintainability gate.
+  # platform must still build, typecheck, lint, test, and — the browser step
+  # below — actually run. A base template whose examples cannot be removed
+  # cleanly is not a template — it is a fork you inherit. Named risk area:
+  # none; this is a maintainability gate.
   platform-only:
     runs-on: ubuntu-latest
     steps:
@@ -240,3 +241,22 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      # Everything above proves the stripped tree compiles; none of it loads a
+      # page. This is the step that closed the gap a Critical finding shipped
+      # through: a runtime-only module-resolution defect that every prior step
+      # in this job was structurally unable to see. `VITE_SENTRA_MOCKS=true` is
+      # the configuration that broke — see `e2e-platform-only/*.spec.ts`.
+      - name: Install Playwright browser
+        run: pnpm --filter @sentra/shell exec playwright install --with-deps chromium
+
+      - name: Smoke-check the stripped shell boots in a browser
+        run: pnpm --filter @sentra/shell e2e:platform-only
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: platform-only-playwright-report
+          path: apps/shell/playwright-report
+          retention-days: 7

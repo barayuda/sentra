@@ -8,7 +8,7 @@ in the Evidence column and confirms it passes.
 
 | # | Claim | Evidence | Where |
 | --- | --- | --- | --- |
-| C1 | The reference implementation can be deleted and the platform still builds, typechecks, lints and tests. | `node scripts/strip-reference.mjs && pnpm install --no-frozen-lockfile && pnpm build && pnpm typecheck && pnpm lint && pnpm test` | CI job `platform-only` |
+| C1 | The reference implementation can be deleted and the platform still builds, typechecks, lints, tests, and runs — it boots in a browser with no console errors. | `node scripts/strip-reference.mjs && pnpm install --no-frozen-lockfile && pnpm build && pnpm typecheck && pnpm lint && pnpm test && pnpm --filter @sentra/shell exec playwright install --with-deps chromium && pnpm --filter @sentra/shell e2e:platform-only` | CI job `platform-only` |
 | C2 | Every workspace member declares which side of the boundary it is on. | `node scripts/workspace.mjs --check` | CI job `platform-only` |
 | C3 | A bundle-size regression fails the build. | `pnpm verify:bundle-size` | CI job `verify` |
 | C4 | An unreviewed high-severity advisory fails the build, and an accepted one expires. | `pnpm verify:audit` | CI job `verify` |
