@@ -35,22 +35,42 @@ function patternToRegExp(pattern) {
 /**
  * Finds the budget covering a file.
  *
+ * Keys starting with `$` (e.g. `$total:js`) are aggregate budgets, not globs —
+ * `evaluate` handles those separately, so they are skipped here rather than
+ * compiled into a pattern that could never legitimately match a real file.
+ *
  * @param {string} file - Path relative to the app's dist directory, `/`-separated.
  * @param {Record<string, number>} budgets - Pattern to max gzipped bytes.
  * @returns {{pattern: string, maxBytes: number} | null} The first matching budget, or null.
  */
 export function matchBudget(file, budgets) {
   for (const [pattern, maxBytes] of Object.entries(budgets)) {
+    if (pattern.startsWith('$')) continue
     if (patternToRegExp(pattern).test(file)) return { pattern, maxBytes }
   }
   return null
 }
 
 /**
+ * Aggregate budget keys, and the file-extension each totals.
+ *
+ * A total is rename-proof where a per-file glob is not: it catches growth
+ * inside chunks whose names are unstable module-federation/bundler virtual
+ * modules that no glob can name reliably.
+ */
+const TOTAL_BUDGETS = { '$total:js': '.js', '$total:css': '.css' }
+
+/**
  * Compares measurements against budgets.
  *
+ * Two kinds of budget are checked: per-file glob patterns (unchanged from the
+ * original gate) and per-app aggregate totals under `$total:js` / `$total:css`
+ * (see `TOTAL_BUDGETS`). The totals exist because most of a bundle's weight
+ * lives in bundler-generated chunk names no glob can name stably — a total is
+ * rename-proof where a pattern is not.
+ *
  * @param {Array<{file: string, bytes: number}>} measurements - Measured files.
- * @param {Record<string, number>} budgets - Pattern to max gzipped bytes.
+ * @param {Record<string, number>} budgets - Pattern (or `$total:*` key) to max gzipped bytes.
  * @returns {{rows: Array<{file: string, bytes: number, budget: number | null}>, failures: string[]}}
  */
 export function evaluate(measurements, budgets) {
@@ -78,7 +98,30 @@ export function evaluate(measurements, budgets) {
      entry chunk would otherwise turn this gate green while it measures no file
      at all. */
   for (const pattern of Object.keys(budgets)) {
+    if (pattern.startsWith('$')) continue
     if (!matched.has(pattern)) failures.push(`budget "${pattern}" matched no file`)
+  }
+
+  for (const [key, extension] of Object.entries(TOTAL_BUDGETS)) {
+    if (!(key in budgets)) continue
+    const contributing = measurements.filter((measurement) => measurement.file.endsWith(extension))
+
+    /* Same vacuity guard as the per-pattern loop above, one level down: an
+       aggregate over zero files is 0, and 0 is under any budget, so without
+       this check a typo'd extension or an empty dist would read as coverage
+       while measuring nothing. */
+    if (contributing.length === 0) {
+      failures.push(`budget "${key}" matched no file`)
+      continue
+    }
+
+    const total = contributing.reduce((sum, measurement) => sum + measurement.bytes, 0)
+    const maxBytes = budgets[key]
+    if (total > maxBytes) {
+      failures.push(
+        `${key} is ${total} gzipped bytes, over its ${maxBytes} budget by ${total - maxBytes}`,
+      )
+    }
   }
 
   return { rows, failures }
@@ -104,12 +147,16 @@ async function walk(dir) {
 /**
  * Measures one app's dist directory.
  *
+ * Source maps are excluded entirely, not merely left unbudgeted: they are
+ * verified separately by `verify:sourcemaps`, and letting them into a `$total`
+ * aggregate would silently inflate it with bytes nobody ships to a browser.
+ *
  * @param {string} app - App directory, e.g. `apps/shell`.
  * @returns {Promise<Array<{file: string, bytes: number}>>} Measurements.
  */
 async function measure(app) {
   const dist = join(app, 'dist')
-  const files = await walk(dist)
+  const files = (await walk(dist)).filter((path) => !path.endsWith('.map'))
   return Promise.all(
     files.map(async (path) => ({
       file: relative(dist, path).split(sep).join('/'),
@@ -180,6 +227,15 @@ async function main() {
           : ` (${row.bytes - row.budget >= 0 ? '+' : ''}${row.bytes - row.budget})`
       console.log(
         `  ${String(row.bytes).padStart(8)}  budget ${budget.padStart(8)}${delta}  ${row.file}`,
+      )
+    }
+    for (const [key, extension] of Object.entries(TOTAL_BUDGETS)) {
+      if (!(key in budgets)) continue
+      const total = rows
+        .filter((row) => row.file.endsWith(extension))
+        .reduce((sum, row) => sum + row.bytes, 0)
+      console.log(
+        `  ${String(total).padStart(8)}  budget ${String(budgets[key]).padStart(8)}  ${key}`,
       )
     }
     if (!report) allFailures.push(...failures.map((failure) => `${app}: ${failure}`))

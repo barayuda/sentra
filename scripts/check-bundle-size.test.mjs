@@ -30,6 +30,16 @@ describe('matchBudget', () => {
   it('returns null for a file no pattern covers', () => {
     expect(matchBudget('assets/logo.svg', budgets)).toBeNull()
   })
+
+  it('does not treat a $-prefixed aggregate key as a glob pattern', () => {
+    expect(matchBudget('$total:js', { '$total:js': 100 })).toBeNull()
+  })
+
+  it('skips a $-prefixed key and still matches a real pattern', () => {
+    expect(
+      matchBudget('assets/index-a1b2c3.js', { '$total:js': 999, 'assets/index-*.js': 100 }),
+    ).toEqual({ pattern: 'assets/index-*.js', maxBytes: 100 })
+  })
 })
 
 describe('evaluate', () => {
@@ -67,6 +77,59 @@ describe('evaluate', () => {
     )
     expect(failures).toEqual([])
     expect(rows.find((r) => r.file === 'assets/logo.svg').budget).toBeNull()
+  })
+})
+
+describe('evaluate with $total aggregate budgets', () => {
+  it('passes when the summed extension total is under budget', () => {
+    const { failures } = evaluate(
+      [
+        { file: 'assets/a.js', bytes: 40 },
+        { file: 'assets/b.js', bytes: 40 },
+      ],
+      { '$total:js': 100 },
+    )
+    expect(failures).toEqual([])
+  })
+
+  it('fails when the summed extension total is over budget, naming the aggregate', () => {
+    const { failures } = evaluate(
+      [
+        { file: 'assets/a.js', bytes: 60 },
+        { file: 'assets/b.js', bytes: 60 },
+      ],
+      { '$total:js': 100 },
+    )
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('$total:js')
+    expect(failures[0]).toContain('120')
+  })
+
+  it('fails a $total budget that aggregated zero files rather than passing on a zero sum', () => {
+    const { failures } = evaluate([{ file: 'assets/logo.svg', bytes: 900 }], { '$total:js': 100 })
+    expect(failures.some((f) => f.includes('$total:js') && f.includes('matched no file'))).toBe(
+      true,
+    )
+  })
+
+  it('does not double-report a $-prefixed key via the unmatched-pattern guard', () => {
+    const { failures } = evaluate([{ file: 'assets/index-x.js', bytes: 10 }], {
+      '$total:js': 100,
+      'assets/index-*.js': 50,
+    })
+    expect(failures).toEqual([])
+  })
+
+  it('checks $total:js and $total:css independently', () => {
+    const { failures } = evaluate(
+      [
+        { file: 'assets/a.js', bytes: 10 },
+        { file: 'assets/a.css', bytes: 999 },
+      ],
+      { '$total:js': 100, '$total:css': 50 },
+    )
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('$total:css')
   })
 })
 
