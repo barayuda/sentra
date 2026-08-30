@@ -2,10 +2,13 @@
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
+import { validateSourceOwners } from './csp.mjs'
 import { readWorkspaceMembers } from './workspace.mjs'
 
 /** Where the shell publishes its runtime remote registry. */
 const MANIFEST_PATH = 'apps/shell/public/remotes.json'
+/** Origins the shell allows on behalf of remote code, each with a declared owner. */
+const CSP_SOURCES_PATH = 'security/csp-sources.json'
 
 /**
  * Removes manifest entries belonging to deleted reference members.
@@ -20,6 +23,32 @@ const MANIFEST_PATH = 'apps/shell/public/remotes.json'
  */
 export function pruneManifest(entries, referenceNames) {
   return entries.filter((entry) => !referenceNames.has(entry.name))
+}
+
+/**
+ * Removes reference-owned origins from a parsed `csp-sources.json`.
+ *
+ * A directive that loses all of its origins keeps an empty record rather than
+ * disappearing. The directive still exists in the base policy either way, and
+ * an empty object states "nothing widens this here" where an absent key states
+ * only "nobody wrote anything," which is the same text an accidental deletion
+ * leaves behind.
+ *
+ * @param {Record<string, unknown>} file - Parsed `csp-sources.json`.
+ * @returns {Record<string, unknown>} A copy with every reference-owned origin removed.
+ */
+export function pruneCspSources(file) {
+  const pruned = {}
+  for (const [directive, origins] of Object.entries(file)) {
+    if (directive.startsWith('$')) {
+      pruned[directive] = origins
+      continue
+    }
+    pruned[directive] = Object.fromEntries(
+      Object.entries(origins ?? {}).filter(([, record]) => record?.owner !== 'reference'),
+    )
+  }
+  return pruned
 }
 
 /**
@@ -76,6 +105,23 @@ export async function stripReference(rootDir) {
     )
   } catch {
     /* No manifest is a valid state for a platform-only tree. */
+  }
+
+  const cspPath = join(rootDir, CSP_SOURCES_PATH)
+  try {
+    const sources = JSON.parse(await readFile(cspPath, 'utf8'))
+    /* Validate before pruning. An entry with no owner cannot be classified, and
+       silently keeping it is the over-permissive outcome this whole mechanism
+       exists to prevent. */
+    validateSourceOwners(sources)
+    await writeFile(cspPath, `${JSON.stringify(pruneCspSources(sources), null, 2)}\n`)
+  } catch (error) {
+    /* An absent sources file is a valid platform-only state, exactly as an
+       absent manifest is. A *malformed* one is not, and must not be swallowed:
+       a bare `catch` here would turn a JSON syntax error, a bad owner, or a
+       renamed path into a silent no-op that leaves every reference origin in
+       the policy while the strip reports success. */
+    if (error.code !== 'ENOENT') throw error
   }
 
   for (const member of reference) {

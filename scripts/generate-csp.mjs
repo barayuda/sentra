@@ -1,0 +1,100 @@
+#!/usr/bin/env node
+import { readFile, writeFile } from 'node:fs/promises'
+import { dirname, join, resolve } from 'node:path'
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { buildCspPolicy, validateSourceOwners } from './csp.mjs'
+
+/** Repository root, derived from this file's location so cwd does not matter. */
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+/** The shell's built HTML entry point. */
+const HTML_PATH = join(ROOT, 'apps/shell/dist/index.html')
+/** The manifest, as copied into the build by Vite's `public/` handling. */
+const MANIFEST_PATH = join(ROOT, 'apps/shell/dist/remotes.json')
+/** Origins belonging to code inside the remotes. Committed and reviewed. */
+const SOURCES_PATH = join(ROOT, 'security/csp-sources.json')
+/** Header form, for adopters who serve the app from a real server. */
+const HEADERS_PATH = join(ROOT, 'apps/shell/dist/csp-headers.txt')
+
+/**
+ * Converts the committed sources file into the shape `buildCspPolicy` takes.
+ *
+ * The file maps each origin to the reason it is allowed, so that a reviewer
+ * reading a diff sees the justification beside the change. The policy builder
+ * needs only the origins, and `$comment` is documentation, not a directive.
+ *
+ * @param {Record<string, unknown>} file - Parsed `csp-sources.json`.
+ * @returns {Record<string, string[]>} Directive name to extra sources.
+ */
+export function toExtraSources(file) {
+  return Object.fromEntries(
+    Object.entries(file)
+      .filter(([name]) => !name.startsWith('$'))
+      .map(([name, origins]) => [name, Object.keys(origins)]),
+  )
+}
+
+/** Matches a previously injected policy so re-running replaces rather than stacks. */
+const EXISTING = /\s*<meta http-equiv="Content-Security-Policy"[^>]*>/g
+
+/**
+ * Injects a policy into a document's `<head>` as its first child.
+ *
+ * First child, not last: a policy that arrives after a script has already been
+ * parsed does not govern that script.
+ *
+ * @param {string} html - Document source.
+ * @param {string} policy - Policy string.
+ * @returns {string} The document with exactly one policy meta tag.
+ * @throws {Error} When the document has no `<head>`.
+ */
+export function injectMeta(html, policy) {
+  const stripped = html.replace(EXISTING, '')
+  if (!stripped.includes('<head>')) {
+    throw new Error(`cannot inject CSP: no <head> element found`)
+  }
+  const escaped = policy.replaceAll('&', '&amp;').replaceAll('"', '&quot;')
+  return stripped.replace(
+    '<head>',
+    `<head>\n    <meta http-equiv="Content-Security-Policy" content="${escaped}" />`,
+  )
+}
+
+/**
+ * Generates the shell's CSP from its built manifest and applies it.
+ *
+ * Runs after the build, against `dist/`, because that is where the manifest
+ * the browser will actually fetch lives. Generating from `public/` instead
+ * would let a build-time transform of the manifest silently invalidate the
+ * policy. Named risk area: content injection.
+ *
+ * Limitation, confirmed by the Task 1 spike against a real browser: a
+ * `<meta>`-delivered policy cannot express `report-uri` or `report-to`, and
+ * `frame-ancestors` is **ignored entirely** in meta form — Chrome prints
+ * "The Content Security Policy directive 'frame-ancestors' is ignored when
+ * delivered via a <meta> element" on every load. The directive is emitted
+ * anyway because the identical string is written to `dist/csp-headers.txt`,
+ * where a server delivering it as a header does honour it. An adopter who
+ * ships only the meta tag has no clickjacking protection from this policy.
+ */
+async function main() {
+  const entries = JSON.parse(await readFile(MANIFEST_PATH, 'utf8'))
+  const sources = JSON.parse(await readFile(SOURCES_PATH, 'utf8'))
+  /* Ownership is checked at generation time, not only at strip time. A file
+     that reaches a build with an unowned entry is a file the strip could not
+     have pruned correctly, and the policy it produces would be wrong in a way
+     nothing downstream detects. */
+  validateSourceOwners(sources)
+  const policy = buildCspPolicy(entries, toExtraSources(sources))
+
+  const html = await readFile(HTML_PATH, 'utf8')
+  await writeFile(HTML_PATH, injectMeta(html, policy))
+  await writeFile(HEADERS_PATH, `Content-Security-Policy: ${policy}\n`)
+
+  console.log(`csp: applied to ${HTML_PATH}`)
+  console.log(`csp: header form written to ${HEADERS_PATH}`)
+  console.log(`csp: ${policy}`)
+}
+
+if (process.argv[1]?.endsWith('generate-csp.mjs')) await main()

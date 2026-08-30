@@ -8,7 +8,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5175 --strictPort",
-    "build": "vite build",
+    "build": "vite build && node ../../scripts/generate-csp.mjs",
     "preview": "vite preview --port 4175 --strictPort",
     "test": "vitest run",
     "lint": "eslint .",
