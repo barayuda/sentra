@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderCss, renderOverrideBlock } from './css.ts'
+import { renderAtRuleBlock, renderCss, renderOverrideBlock } from './css.ts'
 
 describe('renderCss', () => {
   it('places Tailwind theme namespaces inside @theme', () => {
@@ -51,5 +51,23 @@ describe('renderOverrideBlock', () => {
       { name: '--spacing-4', value: '0.75rem' },
     ])
     expect(css).not.toContain('@theme')
+  })
+})
+
+describe('renderAtRuleBlock', () => {
+  it('nests rendered CSS inside the at-rule and indents the body', () => {
+    const inner = renderOverrideBlock(':root', [{ name: '--duration-fast', value: '0ms' }])
+    const css = renderAtRuleBlock('@media (prefers-reduced-motion: reduce)', inner)
+    /* Indentation is the assertion, not decoration: a body pasted in at
+       column zero still parses, so a test that only checked for the two
+       strings would pass on output that had never been nested at all. */
+    expect(css).toBe(
+      '@media (prefers-reduced-motion: reduce) {\n  :root {\n    --duration-fast: 0ms;\n  }\n}\n',
+    )
+  })
+
+  it('returns an empty string rather than an empty at-rule', () => {
+    expect(renderAtRuleBlock('@media print', renderOverrideBlock(':root', []))).toBe('')
+    expect(renderAtRuleBlock('@media print', '   \n  ')).toBe('')
   })
 })

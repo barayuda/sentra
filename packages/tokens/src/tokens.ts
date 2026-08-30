@@ -1,5 +1,5 @@
 import { flattenTokens, type TokenTree } from './flatten.ts'
-import { renderCss, renderOverrideBlock } from './css.ts'
+import { renderAtRuleBlock, renderCss, renderOverrideBlock } from './css.ts'
 
 /**
  * The Sentra design token source of truth.
@@ -73,6 +73,27 @@ export const tokens: TokenTree = {
     fast: '150ms',
     normal: '250ms',
   },
+  /**
+   * Easing curves, named for the role a motion plays rather than its shape.
+   *
+   * `enter` decelerates: an arriving element moves fastest at the start and
+   * settles, which reads as the element coming to rest where it belongs.
+   * `exit` accelerates: a leaving element gathers speed and is gone, so no
+   * attention is spent watching it finish. `standard` eases both ends, for
+   * an element that moves while staying on screen.
+   *
+   * The names avoid `in`/`out`/`in-out` deliberately. `ease` is a Tailwind
+   * theme namespace, so these generate `ease-enter`, `ease-exit`, and
+   * `ease-standard` utilities — and Tailwind ships `ease-in`, `ease-out`,
+   * and `ease-in-out` of its own. Reusing those keys would silently redefine
+   * built-in utilities, changing the meaning of classes elsewhere in the
+   * codebase that never asked for a Sentra curve.
+   */
+  ease: {
+    standard: 'cubic-bezier(0.2, 0, 0, 1)',
+    enter: 'cubic-bezier(0, 0, 0.2, 1)',
+    exit: 'cubic-bezier(0.4, 0, 1, 1)',
+  },
   zIndex: {
     dropdown: 1000,
     overlay: 1200,
@@ -112,6 +133,31 @@ export const darkTokens: TokenTree = {
 }
 
 /**
+ * Reduced-motion overrides, applied under `prefers-reduced-motion: reduce`.
+ *
+ * This is a mode override in exactly the sense dark and compact are: nothing
+ * branches on it in component source. Components reference
+ * `var(--duration-fast)` and `var(--duration-normal)`; collapsing both to zero
+ * here removes every transition and animation in one declaration, for the
+ * whole platform, including consumer code that follows the same convention.
+ *
+ * Honouring that setting is not decoration. Vestibular disorders make large
+ * or repeated motion genuinely unpleasant, and the operating system already
+ * knows the user's answer — a design system that ignores it is overriding an
+ * accessibility preference the user set deliberately.
+ *
+ * `duration.instant` is deliberately absent: it is already `0ms`, and an
+ * override that restates a value it cannot change would look like a control
+ * while doing nothing. Remove it and the emitted CSS is identical.
+ */
+export const reducedMotionTokens: TokenTree = {
+  duration: {
+    fast: '0ms',
+    normal: '0ms',
+  },
+}
+
+/**
  * Density overrides, keyed by mode. Compact tightens the spacing scale for
  * data-heavy screens (the console app in M4 is the intended consumer);
  * component code never branches on density — the variables do the work.
@@ -138,8 +184,8 @@ export const densityTokens: { compact: TokenTree } = {
  * variant declaration, and the mode override blocks.
  *
  * @returns CSS text containing, in order: `@theme` block, `:root` extras,
- * the `@custom-variant dark` declaration, the dark override block, and the
- * compact density override block.
+ * the `@custom-variant dark` declaration, the dark override block, the
+ * compact density override block, and the reduced-motion override block.
  */
 export function buildTokensCss(): string {
   const light = renderCss(flattenTokens(tokens))
@@ -149,5 +195,15 @@ export function buildTokensCss(): string {
     "[data-density='compact']",
     flattenTokens(densityTokens.compact),
   )
-  return [light, darkVariant, dark, compact].filter(Boolean).join('\n')
+  /*
+   * Last, so it wins on equal specificity: a user who asked their operating
+   * system for less motion outranks every other mode. Ordering is the whole
+   * mechanism here — all four blocks target custom properties at the same
+   * specificity, so source order decides.
+   */
+  const reducedMotion = renderAtRuleBlock(
+    '@media (prefers-reduced-motion: reduce)',
+    renderOverrideBlock(':root', flattenTokens(reducedMotionTokens)),
+  )
+  return [light, darkVariant, dark, compact, reducedMotion].filter(Boolean).join('\n')
 }

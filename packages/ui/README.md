@@ -69,6 +69,40 @@ through the tree:
 Storybook's Theme and Density toolbars set these same two attributes on
 `document.documentElement`, which is why every story restyles live when you toggle them.
 
+### Motion
+
+Everything that appears and disappears — `Dialog` in both placements, `Combobox`'s
+listbox, `ToastHost` — animates from a preset in `src/shared/motion.ts`. A preset is a
+plain object of Vue `<Transition>` props, applied with `v-bind`, so no component holds
+motion logic of its own:
+
+```vue
+<Transition v-bind="POPOVER_MOTION">
+  <ul v-if="isOpen" role="listbox">…</ul>
+</Transition>
+```
+
+No preset writes a millisecond value. Timing comes from `duration-[var(--duration-*)]`
+and easing from the `ease-standard` / `ease-enter` / `ease-exit` utilities Tailwind
+generates from `@sentra/tokens`. That is what makes the next paragraph work, and
+`src/shared/motion.test.ts` fails any preset that opts out by hard-coding a duration or
+reaching for a Tailwind built-in curve.
+
+**Reduced motion needs no opt-in.** `@sentra/tokens` redeclares both animated durations
+as `0ms` under `@media (prefers-reduced-motion: reduce)`, so a user who asked their
+operating system for less motion gets these components with their transitions removed —
+not a degraded variant, and not a second code path. One documented gap: Tailwind's
+`animate-*` keyframe utilities set their own duration and are not reached by the
+override, so `ProductCard`'s `animate-pulse` skeleton keeps pulsing. Both the mechanism
+and the gap are recorded in [ADR 0010](../../docs/adr/0010-motion-and-reduced-motion.md).
+
+`Select` is deliberately unanimated: it wraps a native `<select>`, whose dropdown the
+browser draws outside the document.
+
+If you write a test that asserts an overlay is gone, wait for the removal
+(`waitForElementToBeRemoved`) rather than asserting it synchronously. A dismissal now
+outlives the keystroke that triggered it.
+
 ### Accessibility baseline
 
 Storybook runs the a11y addon with violations failing the build, so these are enforced

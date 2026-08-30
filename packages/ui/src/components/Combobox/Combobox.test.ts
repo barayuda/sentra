@@ -148,4 +148,27 @@ describe('Combobox', () => {
     const last = items[items.length - 1]
     expect(input.getAttribute('aria-activedescendant')).toBe(last?.id)
   })
+
+  it('grows the listbox out of the input it belongs to', async () => {
+    render(Combobox, { props: { label: 'Country', options } })
+    await fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowDown' })
+    const listbox = screen.getByRole('listbox')
+    /* `origin-top` is the part that makes this read as the input opening
+       rather than a panel materialising: scaling from the element's own
+       centre makes it appear to drift upward as it grows. */
+    expect(listbox.className).toContain('origin-top')
+    expect(listbox.className).toContain('scale-95')
+    expect(listbox.className).toContain('duration-[var(--duration-fast)]')
+  })
+
+  it('keeps the listbox reachable by role while it animates open', async () => {
+    /* The transition wraps the listbox, so it must not have displaced the
+       `role="listbox"` element that `aria-controls` points at — a popover
+       that animates but is no longer the referenced element is a worse
+       component than one that does not animate at all. */
+    render(Combobox, { props: { label: 'Country', options } })
+    const input = screen.getByRole('combobox')
+    await fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(screen.getByRole('listbox').id).toBe(input.getAttribute('aria-controls'))
+  })
 })

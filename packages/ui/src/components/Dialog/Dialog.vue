@@ -2,6 +2,7 @@
 import { useScrollLock } from '@vueuse/core'
 import { useFocusTrap } from '@vueuse/integrations/useFocusTrap'
 import { computed, onMounted, ref, useId, useTemplateRef, watch } from 'vue'
+import { DRAWER_PANEL_MOTION, MODAL_PANEL_MOTION, OVERLAY_MOTION } from '../../shared/motion.ts'
 
 /**
  * Modal dialog. Teleports to `body`, traps focus while open, locks body
@@ -92,6 +93,15 @@ const footerClass = computed(() =>
   props.placement === 'end' ? 'mt-6 flex flex-col gap-2' : 'mt-6 flex justify-end gap-2',
 )
 
+/**
+ * The panel travels differently per placement: a drawer slides in from the
+ * edge it is anchored to, a centred modal grows into place. Both share the
+ * backdrop fade, which is why only the panel preset is chosen here.
+ */
+const panelMotion = computed(() =>
+  props.placement === 'end' ? DRAWER_PANEL_MOTION : MODAL_PANEL_MOTION,
+)
+
 const panelRef = useTemplateRef<HTMLElement>('panel')
 
 /**
@@ -162,33 +172,46 @@ function onOverlayClick(): void {
 
 <template>
   <Teleport v-if="isMounted" to="body">
-    <div
-      v-if="modelValue"
-      :class="['fixed inset-0 z-[var(--z-index-overlay)] flex', containerClass]"
-    >
+    <!--
+      Two nested transitions, both keyed off `modelValue`, rather than one.
+      The outer fades the backdrop and — crucially — keeps the root mounted
+      for the length of its own leave, which is what gives the inner panel
+      transition somewhere to play out. Collapsing these into a single
+      transition on the root would fade the panel and the scrim together as
+      one flat layer, losing the slide entirely.
+    -->
+    <Transition v-bind="OVERLAY_MOTION">
       <div
-        data-testid="dialog-overlay"
-        class="absolute inset-0 bg-neutral-900/50"
-        @click="onOverlayClick"
-      />
-      <div
-        ref="panel"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="titleId"
-        :aria-describedby="describedBy"
-        tabindex="-1"
-        :class="['relative z-[var(--z-index-modal)] bg-neutral-50 p-6 shadow-lg', panelClass]"
+        v-if="modelValue"
+        :class="['fixed inset-0 z-[var(--z-index-overlay)] flex', containerClass]"
       >
-        <h2 :id="titleId" class="text-lg font-semibold text-neutral-900">{{ title }}</h2>
-        <p v-if="description" :id="descriptionId" class="mt-1 text-sm text-neutral-500">
-          {{ description }}
-        </p>
-        <div data-testid="dialog-body" :class="bodyClass"><slot /></div>
-        <div v-if="$slots.footer" data-testid="dialog-footer" :class="footerClass">
-          <slot name="footer" />
-        </div>
+        <div
+          data-testid="dialog-overlay"
+          class="absolute inset-0 bg-neutral-900/50"
+          @click="onOverlayClick"
+        />
+        <Transition v-bind="panelMotion">
+          <div
+            v-if="modelValue"
+            ref="panel"
+            role="dialog"
+            aria-modal="true"
+            :aria-labelledby="titleId"
+            :aria-describedby="describedBy"
+            tabindex="-1"
+            :class="['relative z-[var(--z-index-modal)] bg-neutral-50 p-6 shadow-lg', panelClass]"
+          >
+            <h2 :id="titleId" class="text-lg font-semibold text-neutral-900">{{ title }}</h2>
+            <p v-if="description" :id="descriptionId" class="mt-1 text-sm text-neutral-500">
+              {{ description }}
+            </p>
+            <div data-testid="dialog-body" :class="bodyClass"><slot /></div>
+            <div v-if="$slots.footer" data-testid="dialog-footer" :class="footerClass">
+              <slot name="footer" />
+            </div>
+          </div>
+        </Transition>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>

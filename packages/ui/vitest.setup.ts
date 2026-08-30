@@ -9,11 +9,44 @@
  * keeps tests isolated without reintroducing implicit globals.
  */
 import { cleanup } from '@testing-library/vue'
+import { config } from '@vue/test-utils'
 import { afterEach } from 'vitest'
 
 afterEach(() => {
   cleanup()
+  /*
+   * `cleanup()` unmounts, and unmounting an element that carries a leave
+   * transition defers its removal by a frame rather than removing it inline.
+   * For teleported content — `Dialog` renders into `document.body`, outside
+   * the container `cleanup()` deletes — that deferral outlives the test: the
+   * next `getByTestId('dialog-overlay')` then finds two overlays and fails on
+   * an ambiguity that has nothing to do with what it was testing.
+   *
+   * Clearing the body closes that window synchronously. It runs after
+   * `cleanup()`, so it only ever removes what unmounting left behind.
+   */
+  document.body.replaceChildren()
 })
+
+/**
+ * Render `<Transition>` and `<TransitionGroup>` for real instead of stubbing
+ * them.
+ *
+ * Vue Test Utils replaces both with a `<transition-stub>` **element** by
+ * default. That element is not transparent: it becomes a real node in the
+ * tree, so a transitioned child's `parentElement` is the stub rather than the
+ * element the component actually nests it inside. Several component tests
+ * assert layout classes through `parentElement` — with the stub in place
+ * those assertions describe Vue Test Utils' shape, not ours, and would keep
+ * describing it after a genuine restructuring broke the real DOM.
+ *
+ * Disabling the stub costs nothing in timing here. happy-dom reports no
+ * transition duration, so Vue's `whenTransitionEnds` resolves on the next
+ * frame rather than waiting on a `transitionend` that would never fire; a
+ * leaving element is gone within a tick or two, which every removal assertion
+ * in this suite already awaits.
+ */
+config.global.stubs = { ...config.global.stubs, transition: false, 'transition-group': false }
 
 /**
  * happy-dom does not run layout: every element's `offsetHeight`/`offsetWidth`

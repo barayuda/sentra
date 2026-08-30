@@ -116,3 +116,28 @@ export function renderOverrideBlock(selector: string, variables: readonly CssVar
   const lines = variables.map((variable) => `  ${variable.name}: ${variable.value};`)
   return `${selector} {\n${lines.join('\n')}\n}\n`
 }
+
+/**
+ * Wraps already-rendered CSS in an at-rule block, indenting its body one level.
+ *
+ * Exists so a mode override can be conditioned on a media query rather than a
+ * selector — `prefers-reduced-motion` is a user preference the document cannot
+ * express as an attribute, unlike theme and density. Composing with
+ * {@link renderOverrideBlock} rather than duplicating its declaration loop
+ * keeps one renderer responsible for how a variable becomes a declaration.
+ *
+ * @param atRule - The at-rule including its prelude, e.g.
+ * `'@media (prefers-reduced-motion: reduce)'`.
+ * @param css - Rendered CSS to nest inside it.
+ * @returns The wrapped block, or `''` when `css` is empty — an empty media
+ * query is dead weight in the output, and callers should not have to check.
+ */
+export function renderAtRuleBlock(atRule: string, css: string): string {
+  if (css.trim() === '') return ''
+  const body = css
+    .trimEnd()
+    .split('\n')
+    .map((line) => (line === '' ? line : `  ${line}`))
+    .join('\n')
+  return `${atRule} {\n${body}\n}\n`
+}

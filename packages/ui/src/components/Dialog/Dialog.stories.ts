@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, userEvent, waitFor, waitForElementToBeRemoved, within } from 'storybook/test'
 import { ref } from 'vue'
 import Button from '../Button/Button.vue'
 import Dialog from './Dialog.vue'
@@ -84,6 +84,12 @@ export const DrawerTrapHoldsFocus: Story = {
     await expect(dialog.getAttribute('aria-modal')).toBe('true')
     await expect(dialog.className).toContain('h-full')
 
+    /* The panel is found the moment it mounts, which is the moment it is
+       still translated off the edge. Measuring then would measure the
+       animation, not the layout — so wait for the enter to hand the panel
+       over to its resting position first. */
+    await waitFor(() => expect(dialog.className).not.toContain('translate-x-full'))
+
     /* Real layout, which is the one thing the unit tests cannot check: the
        body genuinely overflows, the panel itself does not, and the footer
        stays inside the panel's box while the list scrolls under it. In
@@ -99,7 +105,11 @@ export const DrawerTrapHoldsFocus: Story = {
     await userEvent.tab()
     await expect(dialog.contains(document.activeElement)).toBe(true)
     await userEvent.keyboard('{Escape}')
-    await expect(body.queryByRole('dialog')).toBeNull()
+    /* Dismissal is animated, so the panel outlives the keystroke by the
+       leave duration. A bare `queryByRole(...)` assertion here would be
+       checking the DOM mid-transition and would fail in a real browser
+       while passing in happy-dom, where nothing has a duration. */
+    await waitForElementToBeRemoved(() => body.queryByRole('dialog'))
   },
 }
 
@@ -114,6 +124,6 @@ export const TrapHoldsFocus: Story = {
     await userEvent.tab()
     await expect(dialog.contains(document.activeElement)).toBe(true)
     await userEvent.keyboard('{Escape}')
-    await expect(body.queryByRole('dialog')).toBeNull()
+    await waitForElementToBeRemoved(() => body.queryByRole('dialog'))
   },
 }

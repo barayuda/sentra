@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useId, watch } from 'vue'
 import { FIELD_CLASSES, FOCUS_CLASSES, SIZE_CLASSES, type Size } from '../../shared/controls.ts'
+import { POPOVER_MOTION } from '../../shared/motion.ts'
 import type { SelectOption } from '../Select/options.ts'
 
 /**
@@ -197,38 +198,40 @@ function onKeydown(event: KeyboardEvent): void {
         @keydown="onKeydown"
         @blur="close"
       />
-      <ul
-        v-if="isOpen"
-        :id="listboxId"
-        role="listbox"
-        :aria-label="label"
-        :aria-busy="isLoading || undefined"
-        class="absolute z-[var(--z-index-dropdown)] mt-1 max-h-60 w-full overflow-auto rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-md"
-      >
-        <li v-if="isLoading" class="px-3 py-2 text-sm text-neutral-500">Loading…</li>
-        <li
-          v-for="(option, index) in visibleOptions"
-          v-else
-          :id="optionId(index)"
-          :key="option.value"
-          role="option"
-          :aria-selected="option.value === modelValue"
-          :aria-disabled="option.disabled || undefined"
-          class="cursor-pointer px-3 py-2 text-sm"
-          :class="index === activeIndex ? 'bg-brand-50 text-brand-700' : 'text-neutral-700'"
-          @mousedown.prevent
-          @click="select(index)"
-          @mousemove="activeIndex = index"
+      <Transition v-bind="POPOVER_MOTION">
+        <ul
+          v-if="isOpen"
+          :id="listboxId"
+          role="listbox"
+          :aria-label="label"
+          :aria-busy="isLoading || undefined"
+          class="absolute z-[var(--z-index-dropdown)] mt-1 max-h-60 w-full overflow-auto rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-md"
         >
-          {{ option.label }}
-        </li>
-        <li
-          v-if="!isLoading && !loadFailed && visibleOptions.length === 0"
-          class="px-3 py-2 text-sm text-neutral-500"
-        >
-          No matches
-        </li>
-      </ul>
+          <li v-if="isLoading" class="px-3 py-2 text-sm text-neutral-500">Loading…</li>
+          <li
+            v-for="(option, index) in visibleOptions"
+            v-else
+            :id="optionId(index)"
+            :key="option.value"
+            role="option"
+            :aria-selected="option.value === modelValue"
+            :aria-disabled="option.disabled || undefined"
+            class="cursor-pointer px-3 py-2 text-sm"
+            :class="index === activeIndex ? 'bg-brand-50 text-brand-700' : 'text-neutral-700'"
+            @mousedown.prevent
+            @click="select(index)"
+            @mousemove="activeIndex = index"
+          >
+            {{ option.label }}
+          </li>
+          <li
+            v-if="!isLoading && !loadFailed && visibleOptions.length === 0"
+            class="px-3 py-2 text-sm text-neutral-500"
+          >
+            No matches
+          </li>
+        </ul>
+      </Transition>
       <p v-if="loadFailed" role="alert" class="mt-1 text-sm text-danger-500">
         Options could not load. Try again.
       </p>
