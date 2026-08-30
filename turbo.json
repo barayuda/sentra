@@ -12,6 +12,10 @@
       "outputs": ["dist/**"],
       "env": ["VITE_SENTRA_MOCKS"]
     },
+    "@sentra/sdk-commerce#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["src/generated/**"]
+    },
     "typecheck": {
       "dependsOn": ["^build"]
     },
