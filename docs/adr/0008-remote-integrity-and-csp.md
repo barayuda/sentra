@@ -288,7 +288,7 @@ SHA-384 consistency, checked directly rather than assumed:
 rtk proxy grep -niE "sha384|SHA-384" docs/adr/0008-remote-integrity-and-csp.md packages/shell-contract/src/manifest.ts scripts/hash-remotes.mjs
 ```
 
-This ADR names SHA-384 and the `sha384-<base64>` form throughout; `manifest.ts:112`'s
+This ADR names SHA-384 and the `sha384-<base64>` form throughout; `manifest.ts`'s
 `INTEGRITY_PATTERN` is `/^sha384-[A-Za-z0-9+/]{64}={0,2}$/`; `hash-remotes.mjs`'s
 `sriHash` emits `` `sha384-${createHash('sha384').update(buffer).digest('base64')}` ``. All
 three agree on the algorithm and the digest form; none of them says SHA-256 or leaves the
