@@ -38,11 +38,24 @@ export function toExtraSources(file) {
 /** Matches a previously injected policy so re-running replaces rather than stacks. */
 const EXISTING = /\s*<meta http-equiv="Content-Security-Policy"[^>]*>/g
 
+/** Matches a `<meta charset>` declaration, in either self-closing or bare form. */
+const CHARSET = /<meta\s+charset=["'][^"']*["']\s*\/?>/i
+
 /**
- * Injects a policy into a document's `<head>` as its first child.
+ * Injects a policy into a document's `<head>`, after `<meta charset>` when one
+ * is present, otherwise as the first child of `<head>`.
  *
- * First child, not last: a policy that arrives after a script has already been
- * parsed does not govern that script.
+ * Must not precede `<meta charset>`: a browser only honours a charset
+ * declaration within the first 1024 bytes of the document. This policy's
+ * `content` attribute grows with every remote origin and every entry in
+ * `security/csp-sources.json` — it is already long, and the design intends
+ * adopters to widen it further — so injecting it before `charset` risks
+ * pushing `charset` past that boundary on a large enough policy, silently
+ * switching the browser to its own encoding detection for the whole document.
+ * Do not "tidy" this back to first-child-of-head.
+ *
+ * Still as early as possible otherwise: a policy that arrives after a script
+ * has already been parsed does not govern that script.
  *
  * @param {string} html - Document source.
  * @param {string} policy - Policy string.
@@ -55,10 +68,12 @@ export function injectMeta(html, policy) {
     throw new Error(`cannot inject CSP: no <head> element found`)
   }
   const escaped = policy.replaceAll('&', '&amp;').replaceAll('"', '&quot;')
-  return stripped.replace(
-    '<head>',
-    `<head>\n    <meta http-equiv="Content-Security-Policy" content="${escaped}" />`,
-  )
+  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${escaped}" />`
+  const charset = stripped.match(CHARSET)
+  if (charset) {
+    return stripped.replace(charset[0], `${charset[0]}\n    ${metaTag}`)
+  }
+  return stripped.replace('<head>', `<head>\n    ${metaTag}`)
 }
 
 /**

@@ -1,5 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "security/csp-sources.json",
+    "scripts/csp.mjs",
+    "scripts/generate-csp.mjs"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -75,6 +75,16 @@ const OWNERS = new Set(['platform', 'reference'])
 export function validateSourceOwners(file) {
   for (const [directive, origins] of Object.entries(file)) {
     if (directive.startsWith('$')) continue
+    /* Checked here too, not only in `validateExtraSources`: without this, the
+       strip accepts and re-emits a non-widenable directive (e.g. `script-src`)
+       and reports success, and the eventual rejection surfaces later, from
+       `validateExtraSources` at build time, naming the wrong stage as the one
+       that caught it. */
+    if (!WIDENABLE.has(directive)) {
+      throw new Error(
+        `csp-sources.json may not widen ${directive}; widenable directives are ${[...WIDENABLE].join(', ')}`,
+      )
+    }
     for (const [origin, record] of Object.entries(origins ?? {})) {
       if (record === null || typeof record !== 'object' || Array.isArray(record)) {
         throw new Error(

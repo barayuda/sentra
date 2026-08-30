@@ -116,6 +116,14 @@ describe('validateSourceOwners', () => {
     file['connect-src']['https://api.example'].reason = '   '
     expect(() => validateSourceOwners(file)).toThrow(/reason/)
   })
+
+  it('refuses a non-widenable directive even when every entry is otherwise well-formed', () => {
+    expect(() =>
+      validateSourceOwners({
+        'script-src': { 'https://evil.example': { owner: 'platform', reason: 'x' } },
+      }),
+    ).toThrow(/script-src/)
+  })
 })
 
 describe('buildCspPolicy', () => {
@@ -245,6 +253,28 @@ describe('injectMeta', () => {
   it('escapes the ampersand first, so an escaped quote is not double-escaped', () => {
     expect(injectMeta(HTML, 'a & b')).toContain('a &amp; b')
     expect(injectMeta(HTML, 'x "y')).not.toContain('&amp;quot;')
+  })
+
+  /* A `<meta charset>` declaration is only honoured within the document's
+     first 1024 bytes. This policy grows with every remote origin and every
+     csp-sources.json entry, so injecting it before charset risks pushing
+     charset past that boundary on a large enough policy — silently switching
+     the browser to its own encoding detection for the whole document. */
+  it('inserts the policy after an existing meta charset, not before it', () => {
+    const withCharset =
+      '<!doctype html>\n<html>\n  <head>\n    <meta charset="UTF-8" />\n    <title>Sentra</title>\n  </head>\n</html>\n'
+    const out = injectMeta(withCharset, "default-src 'self'")
+    expect(out.indexOf('charset')).toBeLessThan(out.indexOf('Content-Security-Policy'))
+    expect(out.indexOf('Content-Security-Policy')).toBeLessThan(out.indexOf('<title>'))
+  })
+
+  it('re-running against a charset document still replaces rather than stacks', () => {
+    const withCharset =
+      '<!doctype html>\n<html>\n  <head>\n    <meta charset="UTF-8" />\n    <title>Sentra</title>\n  </head>\n</html>\n'
+    const once = injectMeta(withCharset, "default-src 'self'")
+    const twice = injectMeta(once, "default-src 'none'")
+    expect(twice.match(/Content-Security-Policy/g)).toHaveLength(1)
+    expect(twice.indexOf('charset')).toBeLessThan(twice.indexOf('Content-Security-Policy'))
   })
 })
 
