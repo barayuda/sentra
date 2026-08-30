@@ -196,3 +196,47 @@ jobs:
           name: federation-playwright-report
           path: apps/shell/playwright-report
           retention-days: 7
+
+  # Proves the claim the proposal leads with: the reference implementation is
+  # deletable. The examples are removed, the lockfile is regenerated, and the
+  # platform must still build, typecheck, lint and test. A base template whose
+  # examples cannot be removed cleanly is not a template — it is a fork you
+  # inherit. Named risk area: none; this is a maintainability gate.
+  platform-only:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Check every member declares a role
+        run: node scripts/workspace.mjs --check
+
+      - name: Delete the reference implementation
+        run: node scripts/strip-reference.mjs
+
+      # --no-frozen-lockfile is correct here and only here: removing workspace
+      # members necessarily changes the lockfile, so the frozen check that
+      # every other job relies on would fail by construction.
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
