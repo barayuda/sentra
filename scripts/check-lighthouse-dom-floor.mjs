@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, readdir } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
 
@@ -52,18 +52,54 @@ export function checkDomFloors(reports, floors) {
 }
 
 /**
- * Reads every `*.report.json` lhci wrote for one config's URLs.
+ * Reads the reports `lhci` collected on *this* run, via `manifest.json`.
+ *
+ * Deliberately not a `readdir(outputDir)` over `*.report.json`: `@lhci/cli`
+ * 0.15.1's filesystem target (`upload.js`) creates `outputDir` once and never
+ * cleans it (`if (!fs.existsSync(targetDir)) fs.mkdirSync(...)`), so report
+ * files from every past invocation accumulate there forever — a directory
+ * listing cannot tell a fresh report from a leftover one from an unrelated
+ * URL months ago. `manifest.json`, by contrast, is fully overwritten on every
+ * run (`fs.writeFileSync(manifestPath, ...)`) with exactly the entries this
+ * invocation produced, each naming its own `url` and `jsonPath`. That
+ * distinction is load-bearing, not stylistic: a re-review falsified the old
+ * `readdir` version by renaming a collected URL, leaving `domSizeFloor` keyed
+ * to the old one, and producing zero fresh reports for the new URL — one
+ * stale leftover report for the old URL was enough to satisfy the vacuity
+ * guard below and pass, on a page that was never measured this run. A
+ * missing or unreadable `manifest.json` is therefore a hard failure here,
+ * not an empty report list: an empty list would sail past the same guard the
+ * same way the stale file did.
  *
  * @param {string} outputDir - `ci.upload.outputDir` from the lighthouserc file.
- * @returns {Promise<Array<{requestedUrl: string, numericValue: number}>>} One entry per report file.
+ * @returns {Promise<Array<{requestedUrl: string, numericValue: number}>>} One entry per manifest-listed run.
  */
-async function readReports(outputDir) {
-  const entries = await readdir(outputDir)
-  const reportFiles = entries.filter((name) => name.endsWith('.report.json'))
+export async function readReports(outputDir) {
+  const manifestPath = join(outputDir, 'manifest.json')
+  let manifestRaw
+  try {
+    manifestRaw = await readFile(manifestPath, 'utf8')
+  } catch (error) {
+    throw new Error(
+      `check-lighthouse-dom-floor: could not read ${manifestPath} (${error.code ?? error.message}) — refusing to fall back to scanning the directory, which cannot distinguish this run's reports from stale leftovers`,
+    )
+  }
+
+  let manifest
+  try {
+    manifest = JSON.parse(manifestRaw)
+  } catch (error) {
+    throw new Error(`check-lighthouse-dom-floor: ${manifestPath} is not valid JSON (${error.message})`)
+  }
+
+  if (!Array.isArray(manifest) || manifest.length === 0) {
+    throw new Error(`check-lighthouse-dom-floor: ${manifestPath} lists no runs — lhci collected nothing this invocation`)
+  }
+
   return Promise.all(
-    reportFiles.map(async (name) => {
-      const report = JSON.parse(await readFile(join(outputDir, name), 'utf8'))
-      return { requestedUrl: report.requestedUrl, numericValue: report.audits['dom-size'].numericValue }
+    manifest.map(async (entry) => {
+      const report = JSON.parse(await readFile(entry.jsonPath, 'utf8'))
+      return { requestedUrl: entry.url, numericValue: report.audits['dom-size'].numericValue }
     }),
   )
 }
@@ -90,7 +126,13 @@ async function main() {
   }
 
   const outputDir = config.ci?.upload?.outputDir ?? '.lighthouseci'
-  const reports = await readReports(outputDir)
+  let reports
+  try {
+    reports = await readReports(outputDir)
+  } catch (error) {
+    console.error(error.message)
+    process.exit(1)
+  }
   const failures = checkDomFloors(reports, floors)
 
   if (failures.length > 0) {
