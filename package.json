@@ -8,6 +8,12 @@
     "node": ">=24.15.0",
     "pnpm": ">=10.34.5"
   },
+  "pnpm": {
+    "$comment": "GHSA-ph9p-34f9-6g65 (high) and GHSA-52f5-9888-hmc6 (low) both land on `tmp`, reached only through @lhci/cli — once directly, once via inquirer > external-editor. Neither has a direct dependent we control, so `overrides` is the only lever; 0.2.6 is the first release patched for both. Keys under `overrides` are package selectors fed to the resolver, so the rationale lives here rather than inside it. Named risk area: supply chain.",
+    "overrides": {
+      "tmp": "^0.2.6"
+    }
+  },
   "scripts": {
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",

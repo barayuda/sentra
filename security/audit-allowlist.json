@@ -1,5 +1,12 @@
 {
-  "$schema": "./allowlist.schema.md",
-  "$comment": "Advisories consciously accepted, each with a deadline. See security/README.md. Ships empty on purpose — entries appear only when pnpm audit actually reports something.",
-  "accepted": []
+  "$schema": "./README.md",
+  "$comment": "Advisories consciously accepted, each with a deadline. See security/README.md. Entries appear only when pnpm audit actually reports something the build cannot fix.",
+  "accepted": [
+    {
+      "id": "GHSA-jmr9-qjv8-65gv",
+      "module": "extract-zip",
+      "reason": "No patched release exists: the advisory records `patched_versions: <0.0.0` against a vulnerable range of `<=2.0.1`, and 2.0.1 is the latest published version, so there is nothing to upgrade to. Reached only as .>@lhci/cli>lighthouse>puppeteer-core>@puppeteer/browsers>extract-zip — a devDependency that runs in CI, never in shipped application code. The vulnerability requires extracting an attacker-supplied archive (CVSS 3.1 vector AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N, per the advisory record); the only archive this path extracts is the Chrome build that @puppeteer/browsers downloads from Google's CDN over HTTPS. Named risk area: supply chain. Re-check at the deadline: drop this entry the moment extract-zip publishes a fix, or if Lighthouse CI is removed.",
+      "expires": "2026-11-28"
+    }
+  ]
 }
