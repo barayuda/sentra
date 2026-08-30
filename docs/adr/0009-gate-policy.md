@@ -337,6 +337,29 @@ sampling one run would hide it. Neither `lighthouserc.json`'s nor `lighthouserc.
 json`'s own `$comment` ever stated this; it is recorded here so the choice is not left to
 be reverse-engineered from the script's source.
 
+**The floor has since caught a live regression, and its cause is an ordering hazard worth
+naming.** `apps/shell/package.json` declares `@sentra/storefront` and `@sentra/console`
+under `optionalDependencies` — deliberately, so `pnpm install` still resolves on a tree
+where `strip-reference.mjs` has deleted them. Turbo reads an optional dependency as an
+ordinary graph edge, so `@sentra/shell#test` inherits `^build` and rebuilds both remotes,
+while `@sentra/shell#build` — the only task that runs `hash-remotes.mjs` — is not in the
+`test` graph at all. Running `pnpm test` after a build therefore does two things at once:
+it regenerates the remote bundles without `VITE_SENTRA_MOCKS` in the ambient environment,
+and it leaves the shell's `dist/remotes.json` pinning digests for bundles that no longer
+exist. A Lighthouse run against that tree scored `performance 0.99` and
+`categories:accessibility 1` on a fourteen-element page whose only data request was a real
+`401` from `demo-shop.myshopify.com`. Every `lhci` assertion passed; the DOM floor was the
+sole failure, with the message it was written to produce.
+
+**CI is not exposed to this, by an ordering that predates the discovery.** The `verify`
+job builds at its `Build` step, runs every dist-reading gate immediately after, and only
+then runs `Typecheck` and `Test` — so the desynchronised tree exists only after the last
+gate that could be misled by it. The hazard is local: a developer who runs `pnpm test` and
+then a gate, or a preview server, is measuring a different application than the one they
+built. No new CI gate is proposed for it, because such a gate would have no reachable
+failing case in CI — a check whose subject is absent, which is level 5 of the progression
+above and precisely what this document argues against adding.
+
 ## Consequences
 
 **What this buys:** every gate in this document has a stated boundary — what it actually
