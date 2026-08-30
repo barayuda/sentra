@@ -12,7 +12,7 @@ every claim below — is [`docs/proposal/README.md`](docs/proposal/README.md).
 
 Sentra ships a design-token pipeline, an accessibility-gated component library, a
 federation host with a runtime remote registry, a generated Content-Security-Policy, a
-remote-integrity check, and five CI gates. It does not ship, and does not attempt to ship,
+remote-integrity check, and the CI gates that enforce them. It does not ship, and does not attempt to ship,
 a full application platform:
 
 | You get                                                                 | You still need                                 |
@@ -169,7 +169,7 @@ records how every CI gate's pass/fail boundary was chosen.
 CI runs these jobs on every push and pull request: `verify` (format, lint, build, typecheck,
 test, the `tokens` Jest suite, and the Storybook build), `interactions` (Storybook's play
 functions and a11y checks in a real browser), `e2e` (the Playwright suite against the built
-storefront alone), `federation-e2e` (the Playwright suite against all three built apps
+storefront alone), `federation-e2e` (the Playwright suite against every built app
 together, proving the federation boundary itself), `lighthouse` (resource, accessibility,
 and timing budgets against the full build), and `platform-only` (deletes the reference
 implementation in a throwaway clone, then rebuilds, typechecks, lints, tests, and smoke-runs

@@ -97,7 +97,7 @@ the federation host, its runtime remote registry, and the typed contract remotes
 against (`apps/shell`, `@sentra/shell-contract`); shared tool configuration
 (`@sentra/config`); a CSP generated from the same manifest the shell loads remotes from; a
 remote-integrity check that refuses to register a remote whose bytes do not match its
-published digest; and five CI gates — CSP, integrity, Lighthouse budgets, bundle-size
+published digest; and CI gates for CSP, integrity, Lighthouse budgets, bundle-size
 budgets, and a dependency-audit allowlist — each with a stated boundary in
 [§5](#what-the-gates-guarantee) below.
 
@@ -121,7 +121,7 @@ adopting Shopify or this particular ops backend.
 
 ## What the gates guarantee
 
-Five CI gates were added on top of build/typecheck/lint/test in this milestone. Each has a
+CI gates were added on top of build/typecheck/lint/test in this milestone. Each has a
 real, stated boundary — what it actually measures, and what it would pass on even if the
 thing it is meant to protect were broken or absent. The general test behind every entry
 below, and the full account of how it was applied, is
@@ -162,7 +162,7 @@ assertion still hold? If yes, the assertion was never actually about that thing.
   (an `<article> → <button> → <h3>` structure with no intervening `<h2>`); and the shell's
   DOM-size floor of 14 is a sanity floor derived from a *broken* page's 9-element
   measurement during calibration, not a measured minimum of the shell's own real content.
-  Full derivations, and the semantics of failing on any of three collected runs rather than
+  Full derivations, and the semantics of failing on any collected run rather than
   only the one Lighthouse marks representative, live in ADR 0009 rather than repeated here.
 - **Bundle-size budget (`pnpm verify:bundle-size`).** Proves the aggregate JS and CSS
   payload stays under a rename-proof ceiling that survives a hashed chunk filename changing
@@ -208,16 +208,23 @@ record.
 One more limitation belongs in this section even though it guards no CI gate: the
 no-numbers-in-prose rule that keeps this document's own claims from going stale (see the
 opening paragraph above) is enforced by review and by a hand-run sweep —
-`rtk proxy grep -rniE "\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|[0-9]{1,4}) [a-z]+s\b" README.md docs/proposal packages/*/README.md apps/*/README.md`
+`rtk proxy grep -rniE "\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|[0-9]{1,4})(\s+[\"'A-Za-z0-9-]+){0,3}\s+[a-z]+s\b" README.md docs/proposal packages/*/README.md apps/*/README.md`
 — not by anything CI checks. The sweep's matches are noisy by construction: a number
-followed by a plural word catches both an inventory assertion that goes stale the moment a
-repository artifact is added or removed, and ordinary prose that states a logical structure
-or refers back to something just named — "two things are both true," "these same two
-attributes." Separating the two requires reading each match in its sentence; there is no
-pattern that keeps the first kind and drops the second without an allowlist, and an
-allowlist built to suppress legitimate prose is more machinery than a documentation rule is
-worth today. So this rule holds only as long as a reviewer keeps applying it — nothing in
-CI fails if it lapses.
+followed by a plural word (allowing up to three words in between, so an intervening
+adjective or a quoted phrase does not defeat it) catches both an inventory assertion that
+goes stale the moment a repository artifact is added or removed, and ordinary prose that
+states a logical structure or refers back to something just named — "two things are both
+true," "these same two attributes." Separating the two requires reading each match in its
+sentence; there is no pattern that keeps the first kind and drops the second without an
+allowlist, and an allowlist built to suppress legitimate prose is more machinery than a
+documentation rule is worth today. The sweep also under-reports in the opposite direction:
+requiring the plural noun within three words of the number still misses a violation with
+enough intervening text, or one phrased without a plural noun at all ("the count is
+seven"). No regex closes that gap either — widening it further only trades one kind of
+miss for more noise, and a pattern that tried to name every phrasing would be indistinguishable
+from just reading the document. So this rule holds only as long as a reviewer keeps applying
+it: the sweep produces candidates for that reading, not a verdict, and nothing in CI fails
+if the reading lapses.
 
 ## Adopting it
 
@@ -276,7 +283,7 @@ over an enforced-but-eventually-disabled one — but it is a real cost, paid on 
 not only when a gate catches something real.
 
 The `tmp` package is pinned via a `pnpm.overrides` entry in root `package.json` to resolve
-two supply-chain advisories reached only through a devDependency this repository does not
+supply-chain advisories reached only through a devDependency this repository does not
 control directly. The override's rationale lives in a `$comment` key placed as a **sibling**
 of `overrides`, never nested inside it — every key nested under `overrides` is read by
 pnpm's resolver as a package-name selector, so a `$comment` placed there would be

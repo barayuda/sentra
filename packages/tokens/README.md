@@ -16,7 +16,7 @@ Output is one file, `dist/tokens.css`. The light-mode values render as separate 
 - `:root` — everything else (`duration`, `zIndex`). Valid custom properties, but Tailwind
   has no namespace for them, so they are consumed as `var(--duration-fast)`.
 
-Beyond those two, the file also emits two mode override blocks — `:root[data-theme='dark']`
+Beyond those two, the file also emits mode override blocks — `:root[data-theme='dark']`
 and `[data-density='compact']` — that redeclare the same custom properties with
 mode-specific values. This restyles the whole system without Tailwind's involvement: every
 generated utility already references `var(--...)`, so redefining the property under a mode

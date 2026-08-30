@@ -6,7 +6,7 @@
 
 A typed Shopify Storefront client, mock-first. It talks GraphQL to Shopify's Storefront
 API, but nothing that imports this package's main entry needs to know that: every call
-returns a `Result<T, StorefrontError>` built from four named failure kinds, never a thrown
+returns a `Result<T, StorefrontError>` built from named failure kinds, never a thrown
 string, and the whole thing runs against MSW fixtures with no network and no live store.
 
 ## Layering
@@ -96,7 +96,7 @@ const transport = createStorefrontTransport({
 ```
 
 When a request is throttled, the retry delay is not a blind backoff. `retryDelayMs`
-computes two candidates and takes whichever is longer:
+computes both candidates and takes whichever is longer:
 
 - ordinary exponential backoff (500ms base, doubling, capped at 4000ms), and
 - when Shopify reported a `throttleStatus`, the arithmetic answer: the cost deficit
