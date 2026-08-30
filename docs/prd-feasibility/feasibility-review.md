@@ -46,10 +46,10 @@ reuse:
   `Session` type (opaque `id`, `displayName`, `role`) and
   `createSessionPlugin`/`useSession` to provide and read it across the
   federation boundary. `apps/shell/src/session.ts` is where it is populated:
-  `initialSession()` (lines 20–24) returns a hardcoded
+  `initialSession()` returns a hardcoded
   `{ id: 'demo-user', displayName: 'Demo User', role }`, with only `role`
   read from `localStorage` (`ROLE_STORAGE_KEY`, `sentra:role`). The file's own
-  comment on `ROLE_STORAGE_KEY` (line 8) and the doc comment above
+  comment on `ROLE_STORAGE_KEY` and the doc comment above
   `initialSession` are explicit: "**This is not authentication.** The role
   lives in `localStorage` and the client decides what it is." There is no
   per-user account and no server-issued identity — only a fixed demo id.
