@@ -206,6 +206,59 @@ jobs:
           path: apps/shell/playwright-report
           retention-days: 7
 
+  # Resource budgets are enforced; lab timing metrics are reported only.
+  # A timing threshold on a shared CI runner produces failures nobody trusts,
+  # and an untrusted gate acquires `continue-on-error: true` and never fails
+  # again. Enforcing only the deterministic half is what keeps this gate alive.
+  # Named risk area: performance regression.
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Mocks make the run self-contained: no network dependency, so a budget
+      # failure is always about this build and never about someone else's API.
+      - name: Build
+        run: VITE_SENTRA_MOCKS=true pnpm build
+
+      # The platform budget. This one runs in every tree, stripped or not.
+      - name: Run Lighthouse CI (platform)
+        run: pnpm verify:lighthouse
+
+      # The reference budget leaves with apps/storefront. Guarding on the file
+      # rather than skipping the step outright keeps the full tree honest: in a
+      # tree that still has the storefront, a missing config is a wiring bug and
+      # this step must run. Do NOT reach for `continue-on-error` here — that
+      # turns both halves into decoration.
+      - name: Run Lighthouse CI (reference)
+        run: |
+          if [ -f lighthouserc.reference.json ]; then
+            pnpm verify:lighthouse:reference
+          else
+            echo "no lighthouserc.reference.json: platform-only tree, nothing to audit"
+          fi
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci
+          retention-days: 7
+
   # Proves the claim the proposal leads with: the reference implementation is
   # deletable. The examples are removed, the lockfile is regenerated, and the
   # platform must still build, typecheck, lint, test, and — the browser step
