@@ -44,6 +44,39 @@ export const Playground: Story = {
   }),
 }
 
+/**
+ * Raises a full stack at once so the group's *move* transition is visible.
+ *
+ * Dismissing the middle toast is the interaction to try: the ones below it
+ * travel to their new positions instead of jumping. That travel is the only
+ * part of the motion system a single toast cannot demonstrate, and it is the
+ * reason the host is a `<TransitionGroup>` rather than a styled `<div>`.
+ */
+export const Stack: Story = {
+  render: () => ({
+    components: { ToastHost, Button },
+    setup() {
+      const toast = useToast()
+      let n = 0
+      return {
+        add: () => toast.show({ title: `Notification ${++n}`, durationMs: 0 }),
+        fill: () => {
+          for (const variant of ['info', 'success', 'danger'] as const) {
+            toast.show({ title: `Notification ${++n}`, variant, durationMs: 0 })
+          }
+        },
+      }
+    },
+    template: `
+      <div class="flex gap-2">
+        <Button @click="fill">Raise three</Button>
+        <Button variant="secondary" @click="add">Add one</Button>
+      </div>
+      <ToastHost />
+    `,
+  }),
+}
+
 export const DangerAnnounces: Story = {
   ...Playground,
   play: async ({ canvasElement }) => {

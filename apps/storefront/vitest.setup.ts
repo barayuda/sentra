@@ -10,11 +10,36 @@
  * `packages/ui/vitest.setup.ts`.
  */
 import { cleanup } from '@testing-library/vue'
+import { config } from '@vue/test-utils'
 import { afterEach } from 'vitest'
 
 afterEach(() => {
   cleanup()
+  /*
+   * `cleanup()` unmounts, and unmounting an element that carries a leave
+   * transition defers its removal by a frame rather than removing it inline.
+   * `CartDrawer` wraps `Dialog`, which teleports to `document.body` — outside
+   * the container `cleanup()` deletes — so that deferral outlives the test and
+   * the next query finds two drawers. Clearing the body closes that window
+   * synchronously, and runs after `cleanup()` so it only removes what
+   * unmounting left behind. Mirrors `packages/ui/vitest.setup.ts`.
+   */
+  document.body.replaceChildren()
 })
+
+/**
+ * Render `<Transition>` and `<TransitionGroup>` for real instead of stubbing
+ * them.
+ *
+ * Vue Test Utils replaces both with a `<transition-stub>` **element** by
+ * default. That element is not transparent: it becomes a real node in the
+ * tree, so a transitioned child's `parentElement` is the stub rather than the
+ * element the component actually nests it inside — which silently invalidates
+ * any assertion made through `parentElement`, including this suite's
+ * drawer-placement checks. Mirrors `packages/ui/vitest.setup.ts`, where the
+ * full reasoning lives.
+ */
+config.global.stubs = { ...config.global.stubs, transition: false, 'transition-group': false }
 
 /**
  * happy-dom does not run layout: every element's `offsetHeight`/`offsetWidth`

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, defineComponent, h } from 'vue'
+import { createApp, defineComponent, h, nextTick } from 'vue'
 import ToastHost from './ToastHost.vue'
 import { toastPlugin, useToast } from './plugin.ts'
 import { createToastService } from './service.ts'
@@ -98,5 +98,34 @@ describe('ToastHost', () => {
     const { fireEvent } = await import('@testing-library/vue')
     await fireEvent.click(screen.getByRole('button', { name: /dismiss/i }))
     expect(service.toasts.value).toHaveLength(0)
+  })
+
+  it('keeps the stack container a positioned element', async () => {
+    /*
+     * The container is a `<TransitionGroup>`, which renders a fragment and
+     * drops its class unless `tag` names an element. Losing it would take
+     * the fixed positioning with it and drop the stack into the document
+     * flow — a layout break with no error anywhere.
+     */
+    const service = createToastService()
+    service.show({ title: 'Saved', durationMs: 0 })
+    render(ToastHost, { global: { provide: { 'sentra:toast': service } } })
+    const container = screen.getByRole('status').parentElement
+    expect(container?.tagName).toBe('DIV')
+    expect(container?.className).toContain('fixed')
+    expect(container?.className).toContain('z-[var(--z-index-toast)]')
+  })
+
+  it('slides a newly raised toast in', async () => {
+    const service = createToastService()
+    render(ToastHost, { global: { provide: { 'sentra:toast': service } } })
+    /* Raised after mount, so this is a genuine enter rather than an initial
+       render — which is the case `appear` would otherwise be needed for. */
+    service.show({ title: 'Saved', durationMs: 0 })
+    await nextTick()
+    const toast = screen.getByRole('status')
+    expect(toast.className).toContain('translate-y-2')
+    expect(toast.className).toContain('opacity-0')
+    expect(toast.className).toContain('duration-[var(--duration-normal)]')
   })
 })

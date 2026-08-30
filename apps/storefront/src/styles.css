@@ -16,3 +16,20 @@
  * completely unstyled.
  */
 @source '../../../packages/ui/src';
+
+/**
+ * Test files are excluded from that scan, and from this application's own.
+ *
+ * Tailwind's scanner reads raw text; it does not parse TypeScript, so it cannot
+ * tell a class name a component uses from one a test names in order to forbid
+ * it. `packages/ui/src/shared/motion.test.ts` exists to fail any preset that
+ * reaches for `ease-in-out`, `ease-linear` or `duration-200` — and by naming
+ * them, it was shipping all four to users as real CSS rules. The guard against
+ * a utility was the only reason that utility existed in the bundle.
+ *
+ * The exclusion is written against `*.test.ts` rather than those four names
+ * because the mechanism is general: any assertion about a class name, present
+ * or future, would otherwise emit it.
+ */
+@source not '../../../packages/ui/src/**/*.test.ts';
+@source not './**/*.test.ts';

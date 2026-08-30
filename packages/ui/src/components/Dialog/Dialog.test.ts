@@ -183,4 +183,56 @@ describe('Dialog', () => {
       expect(emitted('update:modelValue')).toEqual([[false]])
     })
   })
+
+  describe('motion', () => {
+    /*
+     * Vue applies a transition's from-class and active-class during the
+     * render that mounts the element, and only swaps to the to-class two
+     * animation frames later. Awaiting a tick and no more is therefore
+     * deterministic: these assertions read the state the element is
+     * genuinely in, not a race.
+     */
+    it('fades the overlay root in from transparent', async () => {
+      render(Dialog, { props: baseProps })
+      await nextTick()
+      const root = screen.getByRole('dialog').parentElement
+      expect(root?.className).toContain('opacity-0')
+      expect(root?.className).toContain('transition-opacity')
+      expect(root?.className).toContain('duration-[var(--duration-normal)]')
+    })
+
+    it('grows a centred panel into place rather than sliding it', async () => {
+      render(Dialog, { props: baseProps })
+      await nextTick()
+      const panel = screen.getByRole('dialog')
+      expect(panel.className).toContain('scale-95')
+      /* The distinguishing half: a centred modal has no edge to travel from,
+         so picking up the drawer preset here would be a real defect that a
+         bare "some transition is attached" check would happily pass. */
+      expect(panel.className).not.toContain('translate-x-full')
+    })
+
+    it('slides a drawer panel in from the inline end', async () => {
+      render(Dialog, { props: { ...baseProps, placement: 'end' } })
+      await nextTick()
+      const panel = screen.getByRole('dialog')
+      expect(panel.className).toContain('translate-x-full')
+      expect(panel.className).toContain('rtl:-translate-x-full')
+      expect(panel.className).not.toContain('scale-95')
+    })
+
+    it('keeps the panel mounted while it leaves', async () => {
+      /*
+       * The point of the nested transitions: the panel has to still exist
+       * after the close for its exit to be visible at all. Without them Vue
+       * removes the subtree in the same tick the prop changes, and the
+       * dialog vanishes between frames.
+       */
+      const { rerender } = render(Dialog, { props: baseProps })
+      await nextTick()
+      await rerender({ ...baseProps, modelValue: false })
+      await nextTick()
+      expect(screen.queryByRole('dialog')).not.toBeNull()
+    })
+  })
 })

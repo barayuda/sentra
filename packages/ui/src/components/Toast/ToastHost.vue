@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useToast } from './plugin.ts'
+import { TOAST_MOTION } from '../../shared/motion.ts'
 
 /**
  * Renders the toast queue in a fixed viewport corner. Purely presentational:
@@ -16,7 +17,17 @@ const VARIANT_CLASSES: Record<string, string> = {
 </script>
 
 <template>
-  <div
+  <!--
+    A TransitionGroup rather than a plain container with animated children.
+    The difference is `moveClass`: when a toast in the middle of the stack is
+    dismissed, the ones below it have to travel to their new positions, and
+    only a group transition animates that. Without it the survivors jump the
+    instant the dismissed toast unmounts — the one moment the stack is most
+    likely to be under the user's eye.
+  -->
+  <TransitionGroup
+    tag="div"
+    v-bind="TOAST_MOTION"
     class="pointer-events-none fixed inset-x-0 bottom-0 z-[var(--z-index-toast)] flex flex-col items-end gap-2 p-4"
   >
     <div
@@ -43,5 +54,5 @@ const VARIANT_CLASSES: Record<string, string> = {
         </button>
       </div>
     </div>
-  </div>
+  </TransitionGroup>
 </template>

@@ -11,19 +11,34 @@ properties and the Tailwind utility classes follow from that edit.
 Output is one file, `dist/tokens.css`. The light-mode values render as separate blocks:
 
 - `@theme` — tokens in a namespace Tailwind recognises (`color`, `spacing`, `radius`,
-  and so on). Tailwind derives utility classes from these, so `--color-brand-600`
-  produces `bg-brand-600`.
+  `ease`, and so on). Tailwind derives utility classes from these, so `--color-brand-600`
+  produces `bg-brand-600` and `--ease-enter` produces `ease-enter`.
 - `:root` — everything else (`duration`, `zIndex`). Valid custom properties, but Tailwind
   has no namespace for them, so they are consumed as `var(--duration-fast)`.
 
-Beyond those two, the file also emits mode override blocks — `:root[data-theme='dark']`
-and `[data-density='compact']` — that redeclare the same custom properties with
-mode-specific values. This restyles the whole system without Tailwind's involvement: every
-generated utility already references `var(--...)`, so redefining the property under a mode
-selector is enough; components need no change to react to it. A `@custom-variant dark`
-declaration is also emitted, for consumers who prefer writing explicit `dark:` utilities
-of their own against the same `[data-theme=dark]` attribute. See `packages/ui/README.md`'s
-"Theme and density" section for how an application opts in.
+Which block a token lands in is decided by its top-level key, and getting it wrong is
+silent: both blocks are valid CSS, and the only symptom of a misrouted token is a utility
+class that never gets generated. `packages/tokens/src/tokens.test.ts` asserts the routing
+per block rather than per file, so a token in the wrong place fails there instead of in a
+browser.
+
+Beyond those two, the file emits three mode override blocks — `:root[data-theme='dark']`,
+`[data-density='compact']`, and `@media (prefers-reduced-motion: reduce)` — that redeclare
+the same custom properties with mode-specific values. This restyles the whole system
+without Tailwind's involvement: every generated utility already references `var(--...)`,
+so redefining the property under a mode selector is enough; components need no change to
+react to it. A `@custom-variant dark` declaration is also emitted, for consumers who prefer
+writing explicit `dark:` utilities of their own against the same `[data-theme=dark]`
+attribute. See `packages/ui/README.md`'s "Theme and density" section for how an
+application opts in.
+
+The reduced-motion block is emitted **last**, and that ordering is load-bearing rather
+than stylistic: all the override blocks target custom properties at equal specificity, so
+source order is the only thing that makes a user's operating-system preference outrank
+dark mode and compact density. It collapses `--duration-fast` and `--duration-normal` to
+`0ms`, which removes every transition in the platform — and in consumer code following the
+same convention — without a single component branching on the preference. The limits of
+that mechanism are recorded in [ADR 0010](../../docs/adr/0010-motion-and-reduced-motion.md).
 
 ## How to use it
 

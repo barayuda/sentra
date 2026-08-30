@@ -1,6 +1,12 @@
-# Sentra
+<p align="center">
+  <img src="docs/assets/sentra-mark.png" alt="" width="112" height="112" />
+</p>
 
-[![CI](https://github.com/barayuda/sentra/actions/workflows/ci.yml/badge.svg)](https://github.com/barayuda/sentra/actions/workflows/ci.yml)
+<h1 align="center">Sentra</h1>
+
+<p align="center">
+  <a href="https://github.com/barayuda/sentra/actions/workflows/ci.yml"><img src="https://github.com/barayuda/sentra/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+</p>
 
 Sentra is a template: a base platform for building a federated Vue 3 front end, plus a
 working reference implementation (a storefront and an internal ops console) that proves
@@ -145,8 +151,10 @@ workspace's own packages deliberately are not, [ADR 0006](docs/adr/0006-cross-re
 records how the shell and a remote exchange information without one importing the other,
 [ADR 0007](docs/adr/0007-platform-and-reference-boundary.md) records the platform/reference
 split itself, [ADR 0008](docs/adr/0008-remote-integrity-and-csp.md) records the CSP and
-remote-integrity design (and its stated limitations), and [ADR 0009](docs/adr/0009-gate-policy.md)
-records how every CI gate's pass/fail boundary was chosen.
+remote-integrity design (and its stated limitations), [ADR 0009](docs/adr/0009-gate-policy.md)
+records how every CI gate's pass/fail boundary was chosen, and [ADR 0010](docs/adr/0010-motion-and-reduced-motion.md)
+records why transition timing is a token and `prefers-reduced-motion` is a mode override
+rather than component logic.
 
 ## Scripts
 
