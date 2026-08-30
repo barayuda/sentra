@@ -234,6 +234,16 @@ jobs:
       - name: Build
         run: VITE_SENTRA_MOCKS=true pnpm build
 
+      # The `verify` job's bundle-size check runs against a *different* dist:
+      # its `Build` step above uses `pnpm build` with no VITE_SENTRA_MOCKS, and
+      # `turbo.json`'s `env: ["VITE_SENTRA_MOCKS"]` entry makes that a distinct
+      # cache key from this job's mocked build (see task-8-report.md, Step 1b).
+      # Two jobs, two artifacts: `verify:bundle-size` protecting one does
+      # nothing for the other. This step re-runs the same floor check against
+      # the artifact Lighthouse is actually about to measure.
+      - name: Check bundle sizes
+        run: pnpm verify:bundle-size
+
       # The platform budget. This one runs in every tree, stripped or not.
       - name: Run Lighthouse CI (platform)
         run: pnpm verify:lighthouse
@@ -294,6 +304,12 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # The platform gate is the boundary this whole milestone claims is real.
+      # Running it here, on every stripped-tree CI execution, is what keeps
+      # that claim continuously true instead of true-once-in-a-throwaway-clone.
+      - name: Run Lighthouse CI (platform)
+        run: pnpm verify:lighthouse
 
       - name: Typecheck
         run: pnpm typecheck
