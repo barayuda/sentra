@@ -18,6 +18,20 @@ export interface SentraVitestOptions {
    * @defaultValue `[]`
    */
   setupFiles?: string[]
+  /**
+   * Whether to exclude the Playwright suites — `e2e/` and `e2e-platform-only/` —
+   * from the Vitest run.
+   *
+   * Set this in any package that has both a Vitest suite and a Playwright
+   * suite. Without it Vitest picks up the `e2e/` specs and dies on
+   * `@playwright/test`'s runner globals — and because Turborepo reports the
+   * failing package's exit code while the passing packages print their
+   * green counts, the run looks green and exits 1. That exact failure shipped
+   * once; centralising the exclusion is what stops it shipping twice.
+   *
+   * @defaultValue `false`
+   */
+  excludeE2E?: boolean
 }
 
 /**
@@ -40,7 +54,7 @@ export interface SentraVitestOptions {
  * ```
  */
 export function defineVitestConfig(options: SentraVitestOptions = {}) {
-  const { environment = 'node', setupFiles = [] } = options
+  const { environment = 'node', setupFiles = [], excludeE2E = false } = options
 
   return {
     test: {
@@ -48,6 +62,10 @@ export function defineVitestConfig(options: SentraVitestOptions = {}) {
       setupFiles,
       /** Explicit imports only — implicit globals hide where helpers come from. */
       globals: false,
+      /* Naming `exclude` replaces Vitest's default rather than extending it,
+         so `node_modules/**` must be repeated here or dependency tests start
+         running. */
+      ...(excludeE2E ? { exclude: ['e2e/**', 'e2e-platform-only/**', 'node_modules/**'] } : {}),
       coverage: {
         provider: 'v8' as const,
         reporter: ['text', 'json-summary'],
