@@ -23,6 +23,7 @@
     "verify:csp": "node scripts/generate-csp.mjs"
   },
   "devDependencies": {
+    "@lhci/cli": "0.15.1",
     "eslint": "10.9.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-storybook": "10.5.10",
