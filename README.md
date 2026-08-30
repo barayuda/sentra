@@ -163,7 +163,7 @@ records how every CI gate's pass/fail boundary was chosen.
 | `pnpm verify:audit`                             | Dependency audit against `security/audit-allowlist.json`                         |
 | `pnpm verify:lighthouse`                        | Lighthouse budgets (resource size, accessibility hard; timing metrics warn-only) |
 | `pnpm --filter @sentra/storefront e2e`          | Playwright smoke suite against the production storefront build                   |
-| `pnpm --filter @sentra/shell e2e`               | Federated Playwright suite — builds and serves all three apps, drives the shell  |
+| `pnpm --filter @sentra/shell e2e`               | Federated Playwright suite — builds and serves every app, drives the shell       |
 | `pnpm --filter @sentra/shell e2e:platform-only` | Playwright smoke suite against the stripped, platform-only build                 |
 
 CI runs six jobs on every push and pull request: `verify` (format, lint, build, typecheck,

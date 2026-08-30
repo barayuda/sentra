@@ -25,6 +25,10 @@ Set `expires` to the date by which you will have upgraded, replaced, or
 consciously re-accepted the dependency. Ninety days is a reasonable default;
 longer needs a reason in `reason`.
 
+The date you write into `expires` is a commitment, not a placeholder: the
+maintainer who sets it is expected to meet it. Setting one without an owner
+who tracks it is just scheduling a build break for later.
+
 ## What this does not prove
 
 `pnpm audit` reports what its registry's advisory database knows today. It is

@@ -4,7 +4,7 @@
 
 ## What it does
 
-Vue 3 component library for Sentra. Ten components, each with a documented accessibility
+Vue 3 component library for Sentra. Each component has a documented accessibility
 baseline and a Storybook page, grouped by role:
 
 - **Primitives** — `Button`, `Input`, `Select`, `Checkbox`. Chosen first to establish the

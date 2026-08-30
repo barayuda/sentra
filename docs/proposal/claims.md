@@ -4,11 +4,12 @@
 
 Every claim the proposal makes appears here with the check that proves it.
 A claim with no evidence is not shipped. The final review runs each command
-in the Evidence column and confirms it passes.
+in the Evidence column and confirms it passes. C1's command deletes files —
+run it only in a throwaway clone, never in a working checkout.
 
 | # | Claim | Evidence | Where | Verified |
 | --- | --- | --- | --- | --- |
-| C1 | The platform, once the reference implementation is deleted, still builds, typechecks, lints, tests, and runs — it boots in a browser with no console errors. | `apps/shell/e2e-platform-only/platform-only.smoke.spec.ts` | CI job `platform-only` | Pass, 2026-08-30 |
+| C1 | The platform, once the reference implementation is deleted, still builds, typechecks, lints, tests, and runs — it boots in a browser with no console errors. | `node scripts/strip-reference.mjs && pnpm install --no-frozen-lockfile && VITE_SENTRA_MOCKS=true pnpm build && pnpm --filter @sentra/shell e2e:platform-only` | CI job `platform-only` | Pass, 2026-08-30 |
 | C2 | Every workspace member declares which side of the boundary it is on. | `node scripts/workspace.mjs --check` | CI job `platform-only` | Pass, 2026-08-30 |
 | C3 | A bundle-size regression fails the build. | `pnpm verify:bundle-size` | CI job `verify` | Pass, 2026-08-30 |
 | C4 | An unreviewed high-severity advisory fails the build, and an accepted one expires. | `pnpm verify:audit` | CI job `verify` | Pass, 2026-08-30 |
