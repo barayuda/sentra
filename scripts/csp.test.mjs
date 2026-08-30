@@ -221,13 +221,24 @@ describe('pruneCspSources', () => {
 })
 
 describe('injectMeta', () => {
-  const HTML = '<!doctype html>\n<html>\n  <head>\n    <title>Sentra</title>\n  </head>\n</html>\n'
+  /* Every fixture below declares a charset: since Fix round 2, a document
+     with none is refused outright (see the dedicated throw test), so a
+     charset-less fixture can no longer stand in for "a normal document" the
+     way it used to. */
+  const HTML =
+    '<!doctype html>\n<html>\n  <head>\n    <meta charset="UTF-8" />\n    <title>Sentra</title>\n  </head>\n</html>\n'
 
-  it('inserts the policy as the first element in head', () => {
+  /* A `<meta charset>` declaration is only honoured within the document's
+     first 1024 bytes. This policy grows with every remote origin and every
+     csp-sources.json entry, so injecting it before charset risks pushing
+     charset past that boundary on a large enough policy — silently switching
+     the browser to its own encoding detection for the whole document. */
+  it('inserts the policy immediately after the meta charset, before the rest of head', () => {
     const out = injectMeta(HTML, "default-src 'self'")
     expect(out).toContain(
       `<meta http-equiv="Content-Security-Policy" content="default-src 'self'" />`,
     )
+    expect(out.indexOf('charset')).toBeLessThan(out.indexOf('Content-Security-Policy'))
     expect(out.indexOf('Content-Security-Policy')).toBeLessThan(out.indexOf('<title>'))
   })
 
@@ -236,10 +247,37 @@ describe('injectMeta', () => {
     const twice = injectMeta(once, "default-src 'none'")
     expect(twice.match(/Content-Security-Policy/g)).toHaveLength(1)
     expect(twice).toContain("default-src 'none'")
+    expect(twice.indexOf('charset')).toBeLessThan(twice.indexOf('Content-Security-Policy'))
   })
 
   it('throws when the document has no head element', () => {
     expect(() => injectMeta('<html></html>', "default-src 'self'")).toThrow(/head/)
+  })
+
+  /* This is the load-bearing test for Fix round 2: if the throw is ever
+     replaced with a silent fallback to first-child-of-head (exactly what a
+     naive "make it more robust" change would do), `injectMeta` returns a
+     string instead of throwing, and `.toThrow(/charset/)` below fails. */
+  it('throws when the document has no charset declaration, rather than falling back silently', () => {
+    const noCharset =
+      '<!doctype html>\n<html>\n  <head>\n    <title>Sentra</title>\n  </head>\n</html>\n'
+    expect(() => injectMeta(noCharset, "default-src 'self'")).toThrow(/charset/)
+  })
+
+  it('recognises an unquoted charset attribute, which is valid HTML5', () => {
+    const unquoted =
+      '<!doctype html>\n<html>\n  <head>\n    <meta charset=UTF-8>\n    <title>Sentra</title>\n  </head>\n</html>\n'
+    const out = injectMeta(unquoted, "default-src 'self'")
+    expect(out.indexOf('charset')).toBeLessThan(out.indexOf('Content-Security-Policy'))
+    expect(out.indexOf('Content-Security-Policy')).toBeLessThan(out.indexOf('<title>'))
+  })
+
+  it('recognises the legacy http-equiv="Content-Type" charset declaration', () => {
+    const legacy =
+      '<!doctype html>\n<html>\n  <head>\n    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">\n    <title>Sentra</title>\n  </head>\n</html>\n'
+    const out = injectMeta(legacy, "default-src 'self'")
+    expect(out.indexOf('charset')).toBeLessThan(out.indexOf('Content-Security-Policy'))
+    expect(out.indexOf('Content-Security-Policy')).toBeLessThan(out.indexOf('<title>'))
   })
 
   it('escapes a double quote in the policy so the attribute cannot be broken out of', () => {
@@ -253,28 +291,6 @@ describe('injectMeta', () => {
   it('escapes the ampersand first, so an escaped quote is not double-escaped', () => {
     expect(injectMeta(HTML, 'a & b')).toContain('a &amp; b')
     expect(injectMeta(HTML, 'x "y')).not.toContain('&amp;quot;')
-  })
-
-  /* A `<meta charset>` declaration is only honoured within the document's
-     first 1024 bytes. This policy grows with every remote origin and every
-     csp-sources.json entry, so injecting it before charset risks pushing
-     charset past that boundary on a large enough policy — silently switching
-     the browser to its own encoding detection for the whole document. */
-  it('inserts the policy after an existing meta charset, not before it', () => {
-    const withCharset =
-      '<!doctype html>\n<html>\n  <head>\n    <meta charset="UTF-8" />\n    <title>Sentra</title>\n  </head>\n</html>\n'
-    const out = injectMeta(withCharset, "default-src 'self'")
-    expect(out.indexOf('charset')).toBeLessThan(out.indexOf('Content-Security-Policy'))
-    expect(out.indexOf('Content-Security-Policy')).toBeLessThan(out.indexOf('<title>'))
-  })
-
-  it('re-running against a charset document still replaces rather than stacks', () => {
-    const withCharset =
-      '<!doctype html>\n<html>\n  <head>\n    <meta charset="UTF-8" />\n    <title>Sentra</title>\n  </head>\n</html>\n'
-    const once = injectMeta(withCharset, "default-src 'self'")
-    const twice = injectMeta(once, "default-src 'none'")
-    expect(twice.match(/Content-Security-Policy/g)).toHaveLength(1)
-    expect(twice.indexOf('charset')).toBeLessThan(twice.indexOf('Content-Security-Policy'))
   })
 })
 
