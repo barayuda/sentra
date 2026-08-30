@@ -53,6 +53,9 @@ jobs:
       - name: Audit dependencies
         run: pnpm verify:audit
 
+      - name: Check the generated CSP
+        run: pnpm verify:csp
+
       - name: Typecheck
         run: pnpm typecheck
 
