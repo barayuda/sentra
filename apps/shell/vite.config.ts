@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { federation } from '@module-federation/vite'
 import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
@@ -10,13 +11,13 @@ import { defineConfig } from 'vite'
  * `src/mocks/browser.ts` imports `@sentra/sdk-commerce/mocks` and
  * `@sentra/sdk-ops/mocks` to assemble the platform's single mock Service
  * Worker. Both are reference packages (`sentra.role: "reference"`) and
- * `scripts/strip-reference.mjs` deletes them, so on a platform-only tree the
- * bundler must not try to resolve those two specifiers at all — see the
- * conditional `external` below. Nothing in `pnpm build`, `typecheck`, `lint`
- * or `test` ever exercises the mock worker (it only runs behind
- * `VITE_SENTRA_MOCKS=true`, which only the federated E2E job sets, and that
- * job never runs against a stripped tree), so externalizing is safe: there is
- * no runtime path on a platform-only tree that would try to load them.
+ * `scripts/strip-reference.mjs` deletes them, so on a platform-only tree
+ * those two specifiers must resolve to something other than the deleted
+ * packages — see the conditional `resolve.alias` below. Externalizing them
+ * instead (an earlier version of this file did) makes the build succeed and
+ * then fails to resolve the bare specifier in the browser the moment
+ * `VITE_SENTRA_MOCKS=true` is set, which is the flag's entire documented
+ * purpose — a green build is not proof this path works.
  */
 const hasReferenceSdks =
   existsSync(new URL('../../packages/sdk-commerce/package.json', import.meta.url)) &&
@@ -55,6 +56,26 @@ export default defineConfig({
       },
     }),
   ],
+  /* On a platform-only tree, redirect the two reference mock subpaths to a
+     local stub with the same export shape instead of leaving the real
+     packages unresolved. Aliasing (not externalizing) means the bundler
+     always has something real to resolve, so a build with
+     `VITE_SENTRA_MOCKS=true` produces a page that actually runs in a
+     browser: MSW starts with only the platform's own handlers, which is
+     correct — the reference handlers are legitimately absent because the
+     reference implementation is. */
+  resolve: {
+    alias: hasReferenceSdks
+      ? {}
+      : {
+          '@sentra/sdk-commerce/mocks': fileURLToPath(
+            new URL('./src/mocks/stubs/sdk-commerce-mocks.ts', import.meta.url),
+          ),
+          '@sentra/sdk-ops/mocks': fileURLToPath(
+            new URL('./src/mocks/stubs/sdk-ops-mocks.ts', import.meta.url),
+          ),
+        },
+  },
   /* Required by the sourcemap CI check, and by any useful production trace.
      No `target` override: neither shipped remote sets one, and the host must
      not be the only container compiled to a different syntax level than the
@@ -62,9 +83,6 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
-    rollupOptions: {
-      external: hasReferenceSdks ? [] : ['@sentra/sdk-commerce/mocks', '@sentra/sdk-ops/mocks'],
-    },
   },
   server: { port: 5175, strictPort: true },
   preview: { port: 4175, strictPort: true },

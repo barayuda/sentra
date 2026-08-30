@@ -88,4 +88,51 @@ describe('stripReference', () => {
     expect(result.removedDocs).toEqual([])
     await expect(readFile(join(root, 'docs/adr/0001-x.md'), 'utf8')).resolves.toContain('stays')
   })
+
+  it('removes no documentation when referenceDocs is a string, not an array', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sentra-strip-baddocs-string-'))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'sentra', sentra: { referenceDocs: 'docs/adr' } }),
+    )
+    await mkdir(join(root, 'docs/adr'), { recursive: true })
+    await writeFile(join(root, 'docs/adr/0001-x.md'), '# stays\n')
+
+    const result = await stripReference(root)
+
+    expect(result.removedDocs).toEqual([])
+    await expect(readFile(join(root, 'docs/adr/0001-x.md'), 'utf8')).resolves.toContain('stays')
+  })
+
+  it('removes no documentation when referenceDocs is an object, not an array', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sentra-strip-baddocs-object-'))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'sentra', sentra: { referenceDocs: { 0: 'docs/adr' } } }),
+    )
+    await mkdir(join(root, 'docs/adr'), { recursive: true })
+    await writeFile(join(root, 'docs/adr/0001-x.md'), '# stays\n')
+
+    const result = await stripReference(root)
+
+    expect(result.removedDocs).toEqual([])
+    await expect(readFile(join(root, 'docs/adr/0001-x.md'), 'utf8')).resolves.toContain('stays')
+  })
+
+  it('drops non-string entries from an otherwise valid referenceDocs array', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sentra-strip-baddocs-mixed-'))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'sentra',
+        sentra: { referenceDocs: ['docs/worked-example', 42, null] },
+      }),
+    )
+    await mkdir(join(root, 'docs/worked-example'), { recursive: true })
+    await writeFile(join(root, 'docs/worked-example/README.md'), '# cites deleted code\n')
+
+    const result = await stripReference(root)
+
+    expect(result.removedDocs).toEqual(['docs/worked-example'])
+  })
 })
