@@ -5,10 +5,7 @@
       "numberOfRuns": 3,
       "startServerCommand": "pnpm --filter @sentra/storefront preview --port 4173 --strictPort --host 127.0.0.1",
       "startServerReadyPattern": "Local",
-      "url": [
-        "http://127.0.0.1:4173/",
-        "http://127.0.0.1:4173/products/sentra-piece-2"
-      ],
+      "url": ["http://127.0.0.1:4173/", "http://127.0.0.1:4173/products/sentra-piece-2"],
       "settings": {
         "preset": "desktop"
       }

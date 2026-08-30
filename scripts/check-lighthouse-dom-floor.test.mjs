@@ -112,7 +112,11 @@ describe('readReports', () => {
       await writeFile(
         join(dir, 'manifest.json'),
         JSON.stringify([
-          { url: 'http://127.0.0.1:4173/new-url', jsonPath: freshReportPath, isRepresentativeRun: true },
+          {
+            url: 'http://127.0.0.1:4173/new-url',
+            jsonPath: freshReportPath,
+            isRepresentativeRun: true,
+          },
         ]),
       )
 
@@ -126,7 +130,9 @@ describe('readReports', () => {
       // say so. Before the manifest fix, the stale file's numericValue (9)
       // cleared this floor (5) and the guard was satisfied by a leftover
       // instead of firing, so this assertion failed with `[]`.
-      expect(failures).toEqual(['floor for http://127.0.0.1:4173/old-url matched no collected report'])
+      expect(failures).toEqual([
+        'floor for http://127.0.0.1:4173/old-url matched no collected report',
+      ])
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

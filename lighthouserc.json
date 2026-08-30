@@ -5,9 +5,7 @@
       "numberOfRuns": 3,
       "startServerCommand": "pnpm --filter @sentra/shell exec vite preview --port 4175 --strictPort --host 127.0.0.1",
       "startServerReadyPattern": "Local",
-      "url": [
-        "http://127.0.0.1:4175/"
-      ],
+      "url": ["http://127.0.0.1:4175/"],
       "settings": {
         "preset": "desktop"
       }

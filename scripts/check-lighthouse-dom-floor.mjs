@@ -89,11 +89,15 @@ export async function readReports(outputDir) {
   try {
     manifest = JSON.parse(manifestRaw)
   } catch (error) {
-    throw new Error(`check-lighthouse-dom-floor: ${manifestPath} is not valid JSON (${error.message})`)
+    throw new Error(
+      `check-lighthouse-dom-floor: ${manifestPath} is not valid JSON (${error.message})`,
+    )
   }
 
   if (!Array.isArray(manifest) || manifest.length === 0) {
-    throw new Error(`check-lighthouse-dom-floor: ${manifestPath} lists no runs — lhci collected nothing this invocation`)
+    throw new Error(
+      `check-lighthouse-dom-floor: ${manifestPath} lists no runs — lhci collected nothing this invocation`,
+    )
   }
 
   return Promise.all(
@@ -121,7 +125,9 @@ async function main() {
   const config = JSON.parse(await readFile(configPath, 'utf8'))
   const floors = config.domSizeFloor ?? {}
   if (Object.keys(floors).length === 0) {
-    console.error(`check-lighthouse-dom-floor: ${configPath} declares no "domSizeFloor" — nothing to check`)
+    console.error(
+      `check-lighthouse-dom-floor: ${configPath} declares no "domSizeFloor" — nothing to check`,
+    )
     process.exit(1)
   }
 
@@ -139,7 +145,9 @@ async function main() {
     for (const failure of failures) console.error(`dom-size floor check failed: ${failure}`)
     process.exit(1)
   }
-  console.log(`dom-size floor check passed: ${Object.keys(floors).length} URL(s), ${reports.length} report(s)`)
+  console.log(
+    `dom-size floor check passed: ${Object.keys(floors).length} URL(s), ${reports.length} report(s)`,
+  )
 }
 
 if (process.argv[1]?.endsWith('check-lighthouse-dom-floor.mjs')) await main()
