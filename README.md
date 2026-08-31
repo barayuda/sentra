@@ -73,11 +73,20 @@ pnpm test         # Vitest across every workspace member; run it to see the curr
 pnpm --filter @sentra/ui storybook   # component workbench on :6006
 ```
 
-To run the reference storefront on its own:
+To run an app on its own. Each has a `.env.example` documenting its own environment
+contract; copy the one for the app you are running. `VITE_SENTRA_MOCKS` has no fallback
+in any of the three — unset means mocks are OFF even under `vite dev` — so the copy is
+required, not a convenience:
 
 ```bash
 cp apps/storefront/.env.example apps/storefront/.env.local
 pnpm --filter @sentra/storefront dev
+
+cp apps/console/.env.example apps/console/.env.local
+pnpm --filter @sentra/console dev
+
+cp apps/shell/.env.example apps/shell/.env.local
+pnpm --filter @sentra/shell dev
 ```
 
 ## Applications
