@@ -27,6 +27,7 @@
     "verify:bundle-size": "node scripts/check-bundle-size.mjs",
     "verify:audit": "node scripts/check-audit.mjs",
     "verify:csp": "node scripts/generate-csp.mjs",
+    "verify:catalogues": "node scripts/check-catalogues.mjs",
     "verify:lighthouse": "lhci autorun --config=lighthouserc.json && node scripts/check-lighthouse-dom-floor.mjs lighthouserc.json",
     "verify:lighthouse:reference": "lhci autorun --config=lighthouserc.reference.json && node scripts/check-lighthouse-dom-floor.mjs lighthouserc.reference.json"
   },
