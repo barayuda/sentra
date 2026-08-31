@@ -35,7 +35,21 @@ export function httpSource(url: string): FlagSource {
     async load(_context: FlagContext): Promise<FlagValues> {
       const response = await fetch(url)
       if (!response.ok) {
-        throw new Error(`httpSource: ${url} responded with ${response.status}`)
+        /**
+         * A fresh, generic message — never `url` or the response body.
+         *
+         * This error reaches `createFlagClient`'s `onError`, which the
+         * platform's own demonstrated pattern (`apps/console/src/main.ts`)
+         * routes into `@sentra/plugin-errors`. `redact()`'s `QUERY` pattern
+         * would strip a `?token=…` query string, but ADR 0012 labels
+         * `redact()` best-effort, not structural, and a token embedded in a
+         * path segment is not caught by it at all. `@sentra/flags` must not
+         * rely on another package's best-effort layer to keep a token-bearing
+         * URL out of an error report, so the URL is withheld here — do not
+         * "improve" this by putting it back. The status code is kept: it is
+         * diagnostic, not sensitive.
+         */
+        throw new Error(`httpSource: request failed with status ${response.status}`)
       }
       return (await response.json()) as FlagValues
     },

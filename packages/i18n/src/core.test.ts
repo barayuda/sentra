@@ -88,6 +88,29 @@ describe('createI18n plurals', () => {
     expect(i18n.t('items')).toBe('{count} items')
   })
 
+  /*
+   * I2: `en` and `id` alone cannot prove `selectPlural` actually consults the
+   * active locale, because `id`'s fixture has no `one` branch — a hardcoded
+   * `new Intl.PluralRules('en')` would still land on `?? message.other` and
+   * produce the same, correct-looking Indonesian output. `ar` (Arabic — a
+   * test fixture only, not a shipped locale; shipped locales are exactly
+   * `en` and `id`) genuinely disagrees with English at `count: 2`:
+   * `Intl.PluralRules('ar').select(2)` is `'two'`, while
+   * `Intl.PluralRules('en').select(2)` is `'other'`. Because both branches
+   * below carry distinct text, a hardcoded-`'en'` regression would select
+   * `'other'` — a different, wrong string — rather than silently falling
+   * through to the same value `'two'` would have produced.
+   */
+  it('selects a CLDR branch English does not have, proving locale, not a fallback, drove the choice', () => {
+    const arabicPlurals = {
+      ar: {
+        items: { two: '{count} عنصران', other: '{count} عناصر' },
+      },
+    }
+    const i18n = createI18n({ locale: 'ar', fallbackLocale: 'ar', messages: arabicPlurals })
+    expect(i18n.t('items', { count: 2 })).toBe('2 عنصران')
+  })
+
   it('returns the key when a plural message has no "other" branch', () => {
     const onMissing = vi.fn()
     const i18n = createI18n({

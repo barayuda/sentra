@@ -5,6 +5,8 @@ import process from 'node:process'
 
 /** The locale every group is checked against. */
 const REFERENCE_LOCALE = 'en'
+/** Every locale this platform ships. A stray locale file is a defect, not a bonus translation. */
+const ALLOWED_LOCALES = ['en', 'id']
 /** Directories scanned for `src/i18n/` catalogue groups. */
 const ROOTS = ['packages', 'apps']
 /** Matches `{name}` placeholders. */
@@ -42,6 +44,22 @@ export function placeholdersOf(message) {
  */
 export function checkGroup(name, catalogues) {
   const problems = []
+
+  /*
+   * Gap 1 (M2): parity checking alone never rejects a locale merely for
+   * existing — a stray `fr.json` would be compared against `en` and pass as
+   * long as it happened to match. The milestone's constraint is that shipped
+   * locales are exactly `en` and `id`; enforce that here, not just parity
+   * between whichever locales happen to be present.
+   */
+  for (const locale of Object.keys(catalogues)) {
+    if (!ALLOWED_LOCALES.includes(locale)) {
+      problems.push(
+        `${name}: unexpected locale "${locale}" — only ${ALLOWED_LOCALES.join(', ')} are supported`,
+      )
+    }
+  }
+
   const reference = catalogues[REFERENCE_LOCALE]
   if (!reference) {
     problems.push(`${name}: no ${REFERENCE_LOCALE}.json — every group needs a reference locale`)
@@ -76,6 +94,23 @@ export function checkGroup(name, catalogues) {
     }
     for (const [key, message] of Object.entries(catalogue)) {
       if (!(key in reference)) continue
+
+      /*
+       * Gap 2 (M2): the plural-branch check below is gated on
+       * `typeof message === 'object'`, so a translation that replaces a
+       * plural-shaped key (an object of CLDR branches) with a plain string
+       * — or the reverse — silently skips straight past it instead of being
+       * flagged as a shape mismatch.
+       */
+      const referenceIsPlural = typeof reference[key] === 'object' && reference[key] !== null
+      const messageIsPlural = typeof message === 'object' && message !== null
+      if (referenceIsPlural !== messageIsPlural) {
+        problems.push(
+          `${name}: ${locale}.json "${key}" is ${messageIsPlural ? 'a plural object' : 'a plain string'}, but ${REFERENCE_LOCALE}.json "${key}" is ${referenceIsPlural ? 'a plural object' : 'a plain string'}`,
+        )
+        continue
+      }
+
       if (typeof message === 'object' && message !== null && !('other' in message)) {
         problems.push(`${name}: ${locale}.json "${key}" is plural with no "other" branch`)
       }

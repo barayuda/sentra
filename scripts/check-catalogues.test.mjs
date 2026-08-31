@@ -85,4 +85,41 @@ describe('checkGroup', () => {
     expect(problems).toHaveLength(1)
     expect(problems[0]).toMatch(/items.*no "other" branch/)
   })
+
+  /* M2 gap 1: a stray locale must be rejected for existing, not merely
+     parity-checked against `en` and passed because it happens to match. */
+  it('fails a locale outside the supported en/id set, even when it parity-checks cleanly', () => {
+    const problems = checkGroup('ui', {
+      en: reference,
+      id: { greeting: 'Halo', sortBy: 'Urutkan {column}' },
+      fr: { greeting: 'Bonjour', sortBy: 'Trier par {column}' },
+    })
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toBe('ui: unexpected locale "fr" — only en, id are supported')
+  })
+
+  /* M2 gap 2: `typeof message === 'object'` silently skips a plural-shaped
+     key that a translation replaced with a plain string, instead of
+     flagging the shape mismatch. */
+  it('fails a plural-shaped key replaced by a plain string in a translation', () => {
+    const problems = checkGroup('ui', {
+      en: { items: { one: '{count} item', other: '{count} items' } },
+      id: { items: 'barang' },
+    })
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toBe(
+      'ui: id.json "items" is a plain string, but en.json "items" is a plural object',
+    )
+  })
+
+  it('fails a plain-string key replaced by a plural object in a translation', () => {
+    const problems = checkGroup('ui', {
+      en: { greeting: 'Hello' },
+      id: { greeting: { other: 'Halo' } },
+    })
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toBe(
+      'ui: id.json "greeting" is a plural object, but en.json "greeting" is a plain string',
+    )
+  })
 })

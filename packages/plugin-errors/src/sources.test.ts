@@ -36,6 +36,10 @@ describe('installErrorSources', () => {
     event.error = new Error('script broke')
     window.dispatchEvent(event)
     expect(reports[0]?.kind).toBe('window')
+    /* I4: only `kind` was asserted here — a bug that mangled the captured
+       message (e.g. swapping `error` for `message` in `onError`) would have
+       passed this test regardless. */
+    expect(reports[0]?.message).toBe('script broke')
   })
 
   it('captures a CSP violation, which the meta-tag policy cannot report itself', () => {
@@ -52,19 +56,37 @@ describe('installErrorSources', () => {
     expect(reports[0]?.csp?.blockedUri).toBe('https://evil.example/x')
   })
 
-  it('stops capturing after teardown', () => {
-    const { reports, app, teardown } = harness()
+  /*
+   * I4: these four teardown paths used to live in one `it` as sequential
+   * assertions — if the first ever failed, vitest would stop that test right
+   * there, and whether the other three teardown paths actually worked would
+   * never be reported. Split so one failing path cannot mask the other
+   * three; this is the highest-value item of the four gaps closed here, per
+   * the review.
+   */
+  it('stops capturing a window error after teardown', () => {
+    const { reports, teardown } = harness()
     teardown()
 
     const errorEvent = new Event('error') as Event & { error?: unknown }
     errorEvent.error = new Error('after teardown: window error')
     window.dispatchEvent(errorEvent)
     expect(reports).toHaveLength(0)
+  })
+
+  it('stops capturing an unhandled rejection after teardown', () => {
+    const { reports, teardown } = harness()
+    teardown()
 
     const rejectionEvent = new Event('unhandledrejection') as Event & { reason?: unknown }
     rejectionEvent.reason = new Error('after teardown: rejection')
     window.dispatchEvent(rejectionEvent)
     expect(reports).toHaveLength(0)
+  })
+
+  it('stops capturing a CSP violation after teardown', () => {
+    const { reports, teardown } = harness()
+    teardown()
 
     const violationEvent = new Event('securitypolicyviolation') as Event & {
       violatedDirective?: string
@@ -74,6 +96,11 @@ describe('installErrorSources', () => {
     violationEvent.blockedURI = 'https://evil.example/x'
     document.dispatchEvent(violationEvent)
     expect(reports).toHaveLength(0)
+  })
+
+  it('stops capturing a Vue error after teardown', () => {
+    const { reports, app, teardown } = harness()
+    teardown()
 
     app.config.errorHandler?.(new Error('after teardown: vue'), null, 'render')
     expect(reports).toHaveLength(0)

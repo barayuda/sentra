@@ -45,7 +45,7 @@ export const appMessages: Messages = mergeMessages(uiMessages, storefrontMessage
  * make the second case read as a catalogue entry that was never missing —
  * naming the parameter and the actual key separately says what really failed.
  */
-function missingTranslationError(key: string): Error {
+export function missingTranslationError(key: string): Error {
   const separator = key.indexOf(':')
   if (separator === -1) return new Error(`missing translation: ${key}`)
   const messageKey = key.slice(0, separator)

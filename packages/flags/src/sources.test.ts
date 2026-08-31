@@ -36,6 +36,32 @@ describe('httpSource', () => {
     await expect(httpSource('/flags').load(context)).rejects.toThrow('500')
   })
 
+  /*
+   * I1: the thrown message must never embed the request URL — a token-bearing
+   * flags endpoint would otherwise put a credential one hop from
+   * `createFlagClient`'s `onError` sink. Mirrors
+   * `apps/console/src/flags.test.ts:225-253`'s assertion style for
+   * `createOpsFlagSource`. The URL below uses a placeholder host and a
+   * placeholder token-shaped path segment — never a real-looking credential.
+   */
+  it('does not embed the request URL — including a path-segment token — in the thrown message', async () => {
+    const url = 'https://flags.example/v1/token/placeholder-token-abc123/flags'
+    const fetchImpl = vi.fn(async () => new Response('', { status: 503 }))
+    vi.stubGlobal('fetch', fetchImpl)
+
+    let thrown: unknown
+    try {
+      await httpSource(url).load(context)
+    } catch (error) {
+      thrown = error
+    }
+    expect(thrown).toBeInstanceOf(Error)
+    const message = (thrown as Error).message
+    expect(message).not.toContain('flags.example')
+    expect(message).not.toContain('placeholder-token-abc123')
+    expect(message).toContain('503')
+  })
+
   it('propagates a network-level rejection', async () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error('network down')

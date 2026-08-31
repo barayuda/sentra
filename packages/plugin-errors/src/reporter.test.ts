@@ -10,9 +10,19 @@ function collectingSink(): ErrorSink & { reports: ErrorReport[] } {
 describe('createErrorReporter', () => {
   it('reports an Error with its message and stack', () => {
     const sink = collectingSink()
-    createErrorReporter({ sink, now: () => 1000 }).report(new Error('boom'))
+    const error = new Error('boom')
+    createErrorReporter({ sink, now: () => 1000 }).report(error)
     expect(sink.reports[0]?.message).toBe('boom')
     expect(sink.reports[0]?.timestamp).toBe(1000)
+    /*
+     * I4: `error.stack` was in scope here already (every `Error` gets one
+     * from the engine), but nothing asserted the report actually carried it —
+     * a bug that dropped or corrupted `stack` somewhere in the pipeline would
+     * have passed this test regardless. `.stack` is engine-generated prose,
+     * not a fixed literal, so assert containment of the message rather than
+     * exact equality with `error.stack` (which `redact()` may also alter).
+     */
+    expect(sink.reports[0]?.stack).toContain('boom')
   })
 
   it('redacts the message', () => {
@@ -92,6 +102,10 @@ describe('createErrorReporter', () => {
       },
     })
     expect(() => reporter.report(new Error('boom'))).not.toThrow()
+    /* I4: count must increment only after a non-throwing `sink.report()` —
+       a regression that incremented regardless of sink outcome would have
+       passed this test with no assertion on `count` at all. */
+    expect(reporter.count).toBe(0)
   })
 
   it('does not report an error raised inside the sink', () => {
