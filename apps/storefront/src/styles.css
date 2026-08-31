@@ -33,3 +33,22 @@
  */
 @source not '../../../packages/ui/src/**/*.test.ts';
 @source not './**/*.test.ts';
+
+/**
+ * This application's `i18n` directory is excluded for the same reason as the
+ * test files above, generalised one step further: the scanner reads raw text
+ * without understanding what kind of text it is. Everything under `./i18n` is
+ * either message data (the `en.json`/`id.json` catalogues, read by readers,
+ * not by Tailwind) or prose explaining that data (the module's own doc
+ * comments) — neither form names a CSS class on purpose, so nothing in the
+ * directory can produce a true positive. It can produce a false one: a
+ * catalogue value or an explanatory comment is free to contain any English
+ * word, and Tailwind cannot tell a word chosen for its meaning from one
+ * chosen to be a class name. `./i18n/index.ts`'s own comment about
+ * `mergeMessages` rejecting one catalogue letting another "shadow" it is the
+ * case that surfaced this: `shadow` is also a real Tailwind utility, and
+ * scanning that comment shipped it to every page. Excluding the directory,
+ * rather than rewording the comment, is what keeps this app's technical prose
+ * free to use ordinary English.
+ */
+@source not './i18n/**/*';
