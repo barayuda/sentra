@@ -48,7 +48,9 @@ describe('redact', () => {
   })
 
   it('strips query strings from free-form text', () => {
-    expect(redact('at h (https://x.test/pay?token=abc123def456:1:2)')).not.toContain('token')
+    expect(redact('at h (https://x.test/pay?token=abc123def456:1:2)')).toBe(
+      'at h (https://x.test/pay)',
+    )
   })
 })
 
@@ -78,6 +80,6 @@ describe('fingerprintOf', () => {
         stack: 'at h (https://x.test/pay?token=abc123def456:1:2)',
       }),
     )
-    expect(sink.reports[0]?.fingerprint).not.toContain('token')
+    expect(sink.reports[0]?.fingerprint).toBe('manual:boom:at h (https://x.test/pay)')
   })
 })

@@ -47,6 +47,25 @@ describe('createErrorReporter', () => {
     expect(sink.reports[0]?.context).toEqual({})
   })
 
+  it('redacts the value of an allowlisted string context key', () => {
+    const sink = collectingSink()
+    const reporter = createErrorReporter({ sink, allowedContextKeys: ['route'] })
+    reporter.report(new Error('boom'), { route: 'contacted a@b.com about /cart' })
+    expect(sink.reports[0]?.context).toEqual({ route: 'contacted [redacted:email] about /cart' })
+  })
+
+  /*
+   * Non-strings are never passed to `redact` — for these the allowlist alone
+   * is the structural guarantee, since `redact` is best-effort text scrubbing
+   * and was never meant to be the load-bearing protection for a number.
+   */
+  it('passes an allowlisted numeric value through unchanged (allowlist, not redact, bounds this)', () => {
+    const sink = collectingSink()
+    const reporter = createErrorReporter({ sink, allowedContextKeys: ['cardNumber'] })
+    reporter.report(new Error('boom'), { cardNumber: 4111111111111111 })
+    expect(sink.reports[0]?.context).toEqual({ cardNumber: 4111111111111111 })
+  })
+
   it('deduplicates identical errors', () => {
     const sink = collectingSink()
     const reporter = createErrorReporter({ sink })
