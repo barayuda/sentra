@@ -67,4 +67,22 @@ describe('checkGroup', () => {
     expect(problems).toHaveLength(1)
     expect(problems[0]).toMatch(/en\.json/)
   })
+
+  it('fails an added placeholder the reference does not have', () => {
+    const problems = checkGroup('ui', {
+      en: { sortBy: 'Sort by {column}' },
+      id: { sortBy: 'Urutkan {column} {extra}' },
+    })
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toMatch(/sortBy.*adds placeholder.*extra/)
+  })
+
+  it('fails a translated plural message with no other branch', () => {
+    const problems = checkGroup('ui', {
+      en: { items: { one: '{count} item', other: '{count} items' } },
+      id: { items: { one: '{count} barang' } },
+    })
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toMatch(/items.*no "other" branch/)
+  })
 })
