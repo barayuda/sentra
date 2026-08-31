@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@sentra/i18n'
 import { useAnalytics } from '@sentra/plugin-analytics'
 import { useProduct } from '@sentra/sdk-commerce/vue'
 import { Button, Money, Select, useToast, type SelectOption } from '@sentra/ui'
@@ -22,6 +23,7 @@ const props = defineProps<{
 const analytics = useAnalytics()
 const toast = useToast()
 const cart = useCartStore()
+const { t } = useI18n()
 
 const { data: product, loading, error } = useProduct(() => props.handle)
 
@@ -67,7 +69,7 @@ async function addToCart(): Promise<void> {
   if (!added) {
     const failure = cart.error ? errorCopy(cart.error) : null
     toast.show({
-      title: failure?.title ?? 'Could not add to cart',
+      title: failure?.title ?? t('storefront.product.addToCartFailedTitle'),
       description: failure?.detail,
       variant: 'danger',
     })
@@ -81,7 +83,11 @@ async function addToCart(): Promise<void> {
        analytics backend cannot sum strings. */
     value: Number(variant.price.amount),
   })
-  toast.show({ title: 'Added to cart', description: product.value?.title, variant: 'success' })
+  toast.show({
+    title: t('storefront.product.addedToCartTitle'),
+    description: product.value?.title,
+    variant: 'success',
+  })
 }
 </script>
 
@@ -89,8 +95,8 @@ async function addToCart(): Promise<void> {
   <StateBlock
     v-if="loading && !product"
     variant="loading"
-    title="Loading the product"
-    detail="Fetching details from the store."
+    :title="t('storefront.product.loadingTitle')"
+    :detail="t('storefront.product.loadingDetail')"
   />
 
   <StateBlock
@@ -103,13 +109,13 @@ async function addToCart(): Promise<void> {
   <StateBlock
     v-else-if="notFound"
     variant="empty"
-    title="Product not found"
-    detail="This product may have been removed."
+    :title="t('storefront.product.notFoundTitle')"
+    :detail="t('storefront.product.notFoundDetail')"
   >
     <template #action>
-      <RouterLink to="/" class="text-sm text-brand-700 underline"
-        >Back to the collection</RouterLink
-      >
+      <RouterLink to="/" class="text-sm text-brand-700 underline">{{
+        t('storefront.product.backToCollection')
+      }}</RouterLink>
     </template>
   </StateBlock>
 
@@ -139,12 +145,12 @@ async function addToCart(): Promise<void> {
       <Select
         v-if="variantOptions.length > 1"
         v-model="selectedVariantId"
-        label="Variant"
+        :label="t('storefront.product.variantLabel')"
         :options="variantOptions"
       />
 
       <Button :disabled="!canAdd" :loading="cart.loading" @click="addToCart()">
-        {{ canAdd ? 'Add to cart' : 'Sold out' }}
+        {{ canAdd ? t('storefront.product.addToCart') : t('storefront.product.soldOut') }}
       </Button>
 
       <RichText :html="product.descriptionHtml" />

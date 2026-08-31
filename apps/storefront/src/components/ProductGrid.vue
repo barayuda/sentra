@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@sentra/i18n'
 import { shopifyImageSrcset, shopifyImageUrl, type ProductSummary } from '@sentra/sdk-commerce'
 import { ProductCard } from '@sentra/ui'
 import { useElementSize } from '@vueuse/core'
@@ -86,6 +87,8 @@ const virtualizer = useVirtualizer(
 const virtualRows = computed(() => virtualizer.value.getVirtualItems())
 const totalHeight = computed(() => virtualizer.value.getTotalSize())
 
+const { t } = useI18n()
+
 /**
  * Fires `endReached` once the final row enters the rendered window.
  *
@@ -107,7 +110,7 @@ watch(
   <div
     ref="scroller"
     role="list"
-    aria-label="Products"
+    :aria-label="t('storefront.productGrid.listLabel')"
     class="overflow-auto"
     :style="{ height: `${heightPx}px` }"
   >
@@ -141,7 +144,7 @@ watch(
             :image-srcset="
               product.image ? shopifyImageSrcset(product.image.url, SRCSET_WIDTHS) : undefined
             "
-            :badge="product.availableForSale ? undefined : 'Sold out'"
+            :badge="product.availableForSale ? undefined : t('storefront.product.soldOut')"
             @select="emit('select', product.handle)"
           />
         </div>

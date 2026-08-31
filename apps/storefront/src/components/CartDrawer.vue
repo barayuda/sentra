@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@sentra/i18n'
 import { useAnalytics } from '@sentra/plugin-analytics'
 import { shopifyImageUrl } from '@sentra/sdk-commerce'
 import { Button, Dialog, Money } from '@sentra/ui'
@@ -39,6 +40,7 @@ const emit = defineEmits<{
 
 const cart = useCartStore()
 const analytics = useAnalytics()
+const { t } = useI18n()
 
 const failure = computed(() => (cart.error ? errorCopy(cart.error) : null))
 
@@ -57,7 +59,7 @@ async function remove(lineId: string, quantity: number): Promise<void> {
 <template>
   <Dialog
     :model-value="modelValue"
-    title="Your cart"
+    :title="t('storefront.cartDrawer.title')"
     placement="end"
     @update:model-value="emit('update:modelValue', $event)"
   >
@@ -71,8 +73,10 @@ async function remove(lineId: string, quantity: number): Promise<void> {
     <p v-if="failure" role="alert" class="text-sm text-danger-700">{{ failure.detail }}</p>
 
     <div v-if="cart.isEmpty" data-testid="cart-empty" class="py-6 text-center">
-      <p class="text-sm font-medium text-neutral-900">Your cart is empty</p>
-      <p class="mt-1 text-sm text-neutral-500">Add something from the collection to get started.</p>
+      <p class="text-sm font-medium text-neutral-900">
+        {{ t('storefront.cartDrawer.emptyTitle') }}
+      </p>
+      <p class="mt-1 text-sm text-neutral-500">{{ t('storefront.cartDrawer.emptyDetail') }}</p>
     </div>
 
     <ul v-else class="flex flex-col gap-4">
@@ -103,7 +107,9 @@ async function remove(lineId: string, quantity: number): Promise<void> {
               variant="secondary"
               size="sm"
               :disabled="cart.loading"
-              :aria-label="`Decrease quantity of ${line.productTitle}`"
+              :aria-label="
+                t('storefront.cartDrawer.decreaseQuantity', { productTitle: line.productTitle })
+              "
               @click="adjust(line.id, line.quantity - 1)"
             >
               −
@@ -115,7 +121,9 @@ async function remove(lineId: string, quantity: number): Promise<void> {
               variant="secondary"
               size="sm"
               :disabled="cart.loading"
-              :aria-label="`Increase quantity of ${line.productTitle}`"
+              :aria-label="
+                t('storefront.cartDrawer.increaseQuantity', { productTitle: line.productTitle })
+              "
               @click="adjust(line.id, line.quantity + 1)"
             >
               +
@@ -124,10 +132,12 @@ async function remove(lineId: string, quantity: number): Promise<void> {
               variant="ghost"
               size="sm"
               :disabled="cart.loading"
-              :aria-label="`Remove ${line.productTitle} from cart`"
+              :aria-label="
+                t('storefront.cartDrawer.removeLine', { productTitle: line.productTitle })
+              "
               @click="remove(line.id, line.quantity)"
             >
-              Remove
+              {{ t('storefront.cartDrawer.remove') }}
             </Button>
           </div>
         </div>
@@ -146,7 +156,7 @@ async function remove(lineId: string, quantity: number): Promise<void> {
     <template #footer>
       <template v-if="!cart.isEmpty">
         <div class="flex items-center justify-between border-t border-neutral-200 pt-3">
-          <span class="text-sm text-neutral-700">Subtotal</span>
+          <span class="text-sm text-neutral-700">{{ t('storefront.cartDrawer.subtotal') }}</span>
           <span data-testid="cart-subtotal" class="text-sm font-semibold text-neutral-900">
             <Money
               v-if="cart.subtotal"
@@ -169,7 +179,7 @@ async function remove(lineId: string, quantity: number): Promise<void> {
           rel="noopener noreferrer"
           class="inline-flex items-center justify-center rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-neutral-0 no-underline hover:bg-brand-700"
         >
-          Checkout
+          {{ t('storefront.cartDrawer.checkout') }}
         </a>
       </template>
     </template>

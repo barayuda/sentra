@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { useI18n } from '@sentra/i18n'
 import { Button } from '@sentra/ui'
+import LocaleSwitcher from './LocaleSwitcher.vue'
 
 /**
- * Site header: brand, collection link, and the cart trigger.
+ * Site header: brand, collection link, cart trigger, and locale switcher.
  *
  * The cart count is passed in rather than read from the store here, so this
  * component stays a pure presentational unit and can be rendered in a story
@@ -17,6 +19,8 @@ const emit = defineEmits<{
   /** The cart button was activated. */
   openCart: []
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -26,17 +30,24 @@ const emit = defineEmits<{
         to="/"
         class="text-lg font-semibold text-neutral-900 no-underline hover:text-brand-700"
       >
-        Sentra
+        {{ t('storefront.header.brand') }}
       </RouterLink>
-      <Button variant="secondary" @click="emit('openCart')">
-        Cart
-        <span v-if="itemCount > 0" class="ml-1 font-semibold" aria-hidden="true">
-          ({{ itemCount }})
-        </span>
-        <span class="sr-only">
-          {{ itemCount === 0 ? 'empty' : `${itemCount} item${itemCount === 1 ? '' : 's'}` }}
-        </span>
-      </Button>
+      <div class="flex items-center gap-3">
+        <LocaleSwitcher />
+        <Button variant="secondary" @click="emit('openCart')">
+          {{ t('storefront.header.cartButton') }}
+          <span v-if="itemCount > 0" class="ml-1 font-semibold" aria-hidden="true">
+            ({{ itemCount }})
+          </span>
+          <span class="sr-only">
+            {{
+              itemCount === 0
+                ? t('storefront.cart.empty')
+                : t('storefront.cart.count', { count: itemCount })
+            }}
+          </span>
+        </Button>
+      </div>
     </div>
   </header>
 </template>

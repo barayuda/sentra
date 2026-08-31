@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@sentra/i18n'
 import { useCollection } from '@sentra/sdk-commerce/vue'
 import { useAnalytics } from '@sentra/plugin-analytics'
 import { Button } from '@sentra/ui'
@@ -19,6 +20,7 @@ import { errorCopy } from '../lib/errorCopy.ts'
  */
 const router = useRouter()
 const analytics = useAnalytics()
+const { t } = useI18n()
 
 const { products, title, loading, error, hasNextPage, loadMore, reset } = useCollection(
   DEFAULT_COLLECTION_HANDLE,
@@ -49,14 +51,16 @@ function onEndReached(): void {
 
 <template>
   <section>
-    <h1 class="text-xl font-semibold text-neutral-900">{{ title || 'Collection' }}</h1>
+    <h1 class="text-xl font-semibold text-neutral-900">
+      {{ title || t('storefront.collection.defaultTitle') }}
+    </h1>
 
     <StateBlock
       v-if="isInitialLoading"
       class="mt-6"
       variant="loading"
-      title="Loading the collection"
-      detail="Fetching products from the store."
+      :title="t('storefront.collection.loadingTitle')"
+      :detail="t('storefront.collection.loadingDetail')"
     />
 
     <StateBlock
@@ -67,7 +71,7 @@ function onEndReached(): void {
       :detail="copy.detail"
     >
       <template v-if="copy.retryable" #action>
-        <Button @click="reset()">Try again</Button>
+        <Button @click="reset()">{{ t('storefront.collection.tryAgain') }}</Button>
       </template>
     </StateBlock>
 
@@ -75,8 +79,8 @@ function onEndReached(): void {
       v-else-if="isEmpty"
       class="mt-6"
       variant="empty"
-      title="Nothing here yet"
-      detail="This collection has no products at the moment."
+      :title="t('storefront.collection.emptyTitle')"
+      :detail="t('storefront.collection.emptyDetail')"
     />
 
     <template v-else>
@@ -87,7 +91,7 @@ function onEndReached(): void {
         @end-reached="onEndReached"
       />
       <p v-if="loading" class="mt-3 text-center text-sm text-neutral-500" role="status">
-        Loading more products…
+        {{ t('storefront.collection.loadingMore') }}
       </p>
       <p
         v-else-if="inlineError && copy"
