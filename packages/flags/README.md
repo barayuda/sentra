@@ -25,7 +25,10 @@ resolves, or one that always rejects, `isOn()` still returns sensible, static be
 instead of an error or a suspended render. `ready` (a `Ref<boolean>`) flips to `true` once
 one load attempt has completed, successfully or not — a permanently-failing source still
 lets a `v-if="ready"` consumer render, with declared defaults, rather than staying
-suspended forever.
+suspended forever. The exception is a source that never _settles_ at all — a request
+hung against a dead endpoint, rather than one that fails — which leaves `ready` at
+`false` indefinitely. `httpSource` sets no timeout, so if that case matters to you, write
+your own `FlagSource` around `fetch` with an `AbortSignal`.
 
 Local overrides (`?ff_<key>=0|1` in the query string, or a JSON object in `localStorage`)
 let a single browser flip a flag for itself without waiting on the source. They are read

@@ -22,6 +22,13 @@ export function staticSource(values: FlagValues): FlagSource {
  * propagates from `fetch` itself, unchanged. Either way, `httpSource` never
  * swallows the failure; `refresh()` is what turns it into `onError` plus a
  * kept last-good snapshot.
+ *
+ * No timeout is set here. A request that hangs rather than failing never
+ * settles, so a client whose only source has hung leaves `ready` at `false`
+ * — the one outage a `v-if="ready"` guard does not survive. A deployment
+ * that needs a deadline writes its own `FlagSource` around `fetch` with an
+ * `AbortSignal`; `FlagSource` is the seam for exactly that, which is why
+ * this function takes only a URL.
  */
 export function httpSource(url: string): FlagSource {
   return {
