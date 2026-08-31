@@ -70,16 +70,31 @@ kilobyte, add ten percent, round any fractional byte up) rather than chosen to c
 measurement by a comfortable margin. The measurement must be recorded with the commit it was
 taken at, because a byte count without a commit cannot be re-derived. And the *cause* of the
 growth must be named, so that the raise can be challenged on its merits — "this app now ships
-three more packages and their catalogues" invites a reader to ask whether it should, whereas
-"the budget was too tight" invites nothing.
+three more plugin runtimes" invites a reader to ask whether it should, whereas "the budget was
+too tight" invites nothing.
 
 **M6 raised exactly one key under this policy**: `apps/console`'s `assets/index-*.js`, from
 5632 to 6759, measured at 5898 bytes gzipped. The derivation, the commit, the cause, and the
-two entry chunks that grew without breaching are all recorded in that file's `$comment`. A
-code fix was considered and rejected on the ground that the only available one — splitting the
-`en`/`id` catalogues out of the entry chunk — is an approach ADR 0011 explicitly places
-outside M6's scope, so applying it here would have contradicted a decision taken in the same
-milestone.
+two entry chunks that grew without breaching are all recorded in that file's `$comment`.
+
+The case against a code fix is measured rather than argued. The largest available locale-side
+saving is to stop shipping the Indonesian half of `@sentra/ui`'s catalogue, which the console
+never selects — its locale and `fallbackLocale` are both fixed at `'en'`
+(`apps/console/src/main.ts:125-126`). That saving cannot be taken from the app side:
+`uiMessages` is a single object literal (`packages/ui/src/i18n/index.ts:16`), so narrowing the
+install to `{ en: uiMessages.en }` still constructs the whole object and saves 5 bytes.
+Removing `id` from the shared package itself — a change to a platform package on behalf of one
+consumer — brings the entry to 5764 bytes, still 132 over the old budget: `id.json` gzips to
+254 bytes standalone but costs only 134 inside the chunk, because `en`'s identical key names
+have already primed the compression dictionary. Since no locale-side fix closes a 266-byte
+overage, and the one remaining option — lazy per-locale loading — is placed outside M6's scope
+by ADR 0011, the raise is the honest remedy rather than the convenient one.
+
+An earlier revision of this section named the wrong cause: it said the console shipped its own
+`en`/`id` catalogues, and cited ADR 0011's lazy-splitting exclusion as though it also excluded
+dead-locale elimination. Both were false, and the correction is left visible here rather than
+rewritten away, because a policy demanding a challengeable record cannot make its own errors
+disappear.
 
 What this policy deliberately does not do is distinguish a raise from a regression by size.
 266 bytes over is not evidence of anything; a small breach caused by an accident is worse than
