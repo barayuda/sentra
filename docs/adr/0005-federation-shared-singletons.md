@@ -109,6 +109,46 @@ that ship different remotes.
 packages (`@sentra/shell-contract`, `@sentra/ui`) this is a real but modest amount of
 duplicated bytes across three containers, traded for the decoupling above.
 
+## Convention — install order on a shared `app` instance
+
+`singleton: false` for `@sentra/*` keeps each container's copy of a plugin independent at
+the module level, but it does not give a remote its own Vue `app`. A remote never gets one:
+`apps/shell/src/registry/boot.ts` calls `outcome.module.register(app, { bus,
+basePath: outcome.entry.basePath })` for every remote — handing it the shell's own `app`
+instance, not a fresh one. `app.provide(key, value)` for a key that instance already
+provides *replaces* the previous value for the whole container; it does not scope the new
+value to the calling remote's subtree. A remote that calls
+`app.provide(I18N_INJECTION_KEY, …)` during `register()` therefore does not install its own
+i18n instance beside the shell's — it silently wipes the shell's instance for every other
+component in the container, not just its own.
+
+**The rule:** a federated remote must never call `app.provide` for a key the shell already
+provides. It consumes the shell's instance via `inject`; the shell owns installation. A
+remote that needs its own messages **merges into** the shared instance rather than
+replacing it.
+
+**Why the failure is silent:** the clobbering remote works perfectly — it provided what it
+needed, and its own components resolve exactly the instance it just installed. Every
+*other* part of the container breaks instead, which is why the symptom surfaces far from
+the cause. This is the same silence this ADR's Context section already documents at
+`inject` matching on key identity rather than on provider intent (see above, on
+`vue-router`'s and Pinia's `Symbol` keys resolving to `undefined` with no error naming the
+cause) — a wrong-key `inject` and a replaced `provide` are two different mechanisms
+producing the identical shape of failure: the container keeps running, and the break shows
+up somewhere that never touched the line that caused it.
+
+`apps/storefront/src/federated/register.ts` was corrected to merge rather than replace;
+its reviewer confirmed the fix was load-bearing by reverting it directly and watching two
+named federated tests fail at their exact assertion lines.
+
+**The residual hazard, stated plainly:** install order across the three apps is currently
+inconsistent, and nothing enforces this rule mechanically — **it is unenforced.** No lint
+rule, runtime guard, or CI check exists for it. The federated e2e suite catches a violation
+only incidentally, because a remote happens to be registered in the suite that exercises
+the affected path; a configuration where no such remote is registered would not catch it at
+all. This convention is documentation of the correct pattern and an honest statement of
+what is not mechanically checked, not a claim that a gate exists.
+
 ## Alternatives not taken
 
 - **`singleton: true` for every shared dependency, including `@sentra/*`:** would remove
