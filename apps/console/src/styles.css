@@ -16,3 +16,16 @@
  * completely unstyled.
  */
 @source '../../../packages/ui/src';
+
+/**
+ * Excludes test files and `packages/ui`'s own message catalogues from the
+ * scan above, and this application's own test files from its own scan. See
+ * `apps/storefront/src/styles.css` for the full explanation of the mechanism
+ * (Tailwind's scanner reads raw text, not TypeScript, so it cannot tell a
+ * class name a component *uses* from one a test or a catalogue merely
+ * *names*) — this application ships neither catalogue nor other test files
+ * that would need a longer version of the same comment.
+ */
+@source not '../../../packages/ui/src/**/*.test.ts';
+@source not '../../../packages/ui/src/i18n/**/*';
+@source not './**/*.test.ts';

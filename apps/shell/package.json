@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "@module-federation/runtime": "2.9.0",
+    "@sentra/i18n": "workspace:*",
     "@sentra/plugin-analytics": "workspace:*",
+    "@sentra/plugin-errors": "workspace:*",
     "@sentra/result": "workspace:*",
     "@sentra/shell-contract": "workspace:*",
     "@sentra/tokens": "workspace:*",

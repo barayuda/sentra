@@ -21,11 +21,18 @@ both `main.ts` (standalone) and the shell's federated load.
 VITE_SENTRA_MOCKS=true pnpm --filter @sentra/console dev       # http://localhost:5174
 ```
 
-There is no `.env.example` here yet (unlike the shell and the storefront), so
-`VITE_SENTRA_MOCKS` is passed on the command line above, or exported in the shell before
-running `dev`/`build`/`preview`. `src/main.ts`'s own `mocksEnabled()` reads it the same
-way both other apps do: `import.meta.env.VITE_SENTRA_MOCKS === 'true'`, with no fallback
-to `import.meta.env.DEV` — unset means mocks off, even under `vite dev`.
+`VITE_SENTRA_MOCKS` is passed on the command line above so the snippet stands alone; for
+a persistent setup, `cp .env.example .env.local` instead — the console carries its own
+environment contract, as the shell and the storefront do. `src/main.ts`'s own
+`mocksEnabled()` reads the value the same way both other apps do:
+`import.meta.env.VITE_SENTRA_MOCKS === 'true'`, with no fallback to
+`import.meta.env.DEV` — unset means mocks off, even under `vite dev`.
+
+`.env.example` also records the two things the console deliberately does _not_ take from
+the environment: there is no ops URL or token variable (`src/ops.ts` builds the client
+from the mock service, because M4 ships no real ops backend), and feature-flag overrides
+are gated on `import.meta.env.DEV` rather than on a variable — an access-control
+boundary, since overrides are readable from the query string and `localStorage`.
 
 ```bash
 VITE_SENTRA_MOCKS=true pnpm --filter @sentra/console build

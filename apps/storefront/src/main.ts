@@ -4,6 +4,8 @@ import {
   instrumentRouter,
   useAnalytics,
 } from '@sentra/plugin-analytics'
+import { i18nPlugin } from '@sentra/i18n'
+import { consoleSink, errorsPlugin, useErrors } from '@sentra/plugin-errors'
 import { createShellBus, shellBusPlugin } from '@sentra/shell-contract'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
@@ -11,6 +13,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import { createStorefrontAnalyticsTransport, storefrontEventSchema } from './analytics.ts'
 import storefrontRemote from './federated/index.ts'
+import { syncDocumentLang, type SupportedLocale } from './i18n/locale.ts'
+import { createStorefrontI18n } from './i18n/index.ts'
 import { mocksEnabled } from './storefront.ts'
 
 /**
@@ -59,9 +63,21 @@ async function bootstrap(): Promise<void> {
   const app = createApp(App)
   const bus = createShellBus()
 
+  /*
+   * Installed before the i18n plugin so `onMissing`, below, has a reporter to
+   * route into. This is the first composition point between two batteries
+   * with no dependency between their packages.
+   */
+  app.use(errorsPlugin, { sink: consoleSink(), allowedContextKeys: ['key', 'locale'] })
+  const reporter = app.runWithContext(() => useErrors())
+
+  const i18n = createStorefrontI18n(reporter)
+  syncDocumentLang(i18n.locale.value as SupportedLocale)
+
   app.use(createPinia())
   app.use(router)
   app.use(shellBusPlugin, bus)
+  app.use(i18nPlugin, i18n)
   app.use(analyticsPlugin, {
     schema: storefrontEventSchema,
     transport: createStorefrontAnalyticsTransport(),

@@ -9,9 +9,38 @@
  * keeps tests isolated without reintroducing implicit globals. Mirrors
  * `packages/ui/vitest.setup.ts`.
  */
+import { createI18n, I18N_INJECTION_KEY } from '@sentra/i18n'
 import { cleanup } from '@testing-library/vue'
 import { config } from '@vue/test-utils'
 import { afterEach } from 'vitest'
+import { appMessages } from './src/i18n/index.ts'
+
+/**
+ * Installs a real `@sentra/i18n` instance into every `render()` call by
+ * default, rather than leaving components to fall back to `NULL_I18N` (which
+ * renders raw `storefront.*` keys). Component tests assert real English
+ * copy — "Cart", "Checkout", "Variant", the pluralised cart count — so the
+ * suite needs the actual English catalogue behind `t()`, not a stub.
+ *
+ * This uses `config.global.provide` rather than `config.global.plugins`
+ * with `i18nPlugin`: Vue's `app.use()` deduplicates by the *plugin object's
+ * identity*, not by its arguments, within a single app instance. A test that
+ * also installs `i18nPlugin` itself (e.g. `LocaleSwitcher.test.ts`, which
+ * needs its own instance to assert against) would find `app.use(i18nPlugin,
+ * ...)` silently a no-op — Vue logs "Plugin has already been applied to
+ * target app" and keeps this default instance instead. Providing the
+ * injection key directly sidesteps that: Vue Test Utils applies
+ * `global.provide` before `global.plugins` (see its `createInstance`), so a
+ * test's own `i18nPlugin` install still runs and correctly overrides this
+ * default via the same injection key.
+ */
+const testI18n = createI18n({
+  locale: 'en',
+  fallbackLocale: 'en',
+  messages: appMessages,
+})
+
+config.global.provide = { ...config.global.provide, [I18N_INJECTION_KEY]: testI18n }
 
 afterEach(() => {
   cleanup()

@@ -54,6 +54,102 @@ must not fail the same way an *unbuilt* directory does (a real broken CI run). A
 bundle-size tool has no concept of a workspace member that is allowed to not exist; this
 platform's gate needed one built in.
 
+## Raising a budget is a recorded event, not a silent edit
+
+A resource budget that can be edited to match whatever the build currently produces is not a
+budget. But a budget that may never move is worse in a different way: it turns every
+deliberate, justified increase into pressure to either abandon the feature or quietly disable
+the gate — and a gate disabled once stays disabled, which is the failure this ADR's opening
+warns about. The policy is therefore neither "never raise" nor "raise on red", but: **a raise
+is allowed, and it must leave behind enough of a record that a later reader can disagree with
+it.**
+
+Three things make a raise legitimate. The new number must be derived by the rule already
+stated in `bundle-budgets.json`'s `$comment` (round the measurement up to the next whole
+kilobyte, add ten percent, round any fractional byte up) rather than chosen to clear the
+measurement by a comfortable margin. The measurement must be recorded with the commit it was
+taken at, because a byte count without a commit cannot be re-derived. And the *cause* of the
+growth must be named, so that the raise can be challenged on its merits — "this app now ships
+three more plugin runtimes" invites a reader to ask whether it should, whereas "the budget was
+too tight" invites nothing.
+
+**M6 raised exactly one key under this policy** — `apps/console`'s `assets/index-*.js`, from
+5632 to 6759, measured at 5898 bytes gzipped at `f2f1e24` — **and then withdrew it before the
+milestone shipped.** The derivation, the commit, the cause, and the two entry chunks that grew
+without breaching are all recorded in that file's `$comment`. The argument below is the record
+of why the raise was made, kept intact rather than deleted, because a policy that only preserves
+the raises it still agrees with preserves nothing. What withdrew it is recorded at the end.
+
+The case against a code fix is measured rather than argued. The largest available locale-side
+saving is to stop shipping the Indonesian half of `@sentra/ui`'s catalogue, which the console
+never selects — its locale and `fallbackLocale` are both fixed at `'en'`
+(`apps/console/src/main.ts:125-126`). That saving cannot be taken from the app side:
+`uiMessages` is a single object literal (`packages/ui/src/i18n/index.ts:16`), so narrowing the
+install to `{ en: uiMessages.en }` still constructs the whole object and saves 5 bytes.
+Removing `id` from the shared package itself — a change to a platform package on behalf of one
+consumer — brings the entry to 5764 bytes, still 132 over the old budget: `id.json` gzips to
+254 bytes standalone but costs only 134 inside the chunk, because `en`'s identical key names
+have already primed the compression dictionary.
+
+Two candidates were searched, not one. The second is to curate the catalogue's *contents*
+rather than its locales: console's own views reference only `DataTable`
+(`apps/console/src/views/OrdersView.vue:5`), three of the catalogue's seven keys. That fix is
+capped by the same structure and then by arithmetic — `en.json` is also a single JSON object
+literal, so unused keys inside it are no more droppable than an unused locale is, and four keys
+of seven cannot exceed the 134 bytes the entire other half of the catalogue costs. (Whether the
+`Toast` and `Combobox` keys reach the chunk through `@sentra/ui`'s barrel export regardless is
+a separate question, not measured here.)
+
+So the claim is a bound, not an exhaustive search of all possible fixes: the ceiling of both
+available candidates was measured and falls 132 bytes short, and the one remaining option —
+lazy per-locale loading — is placed outside M6's scope by ADR 0011. That is what makes the
+raise the honest remedy rather than the convenient one.
+
+## The raise was withdrawn, and the reason is not the one the argument above anticipated
+
+Re-measured at `e9c72dc`, `apps/console`'s entry chunk is **4930 bytes** — under the original
+5632 budget, with the rule regenerating exactly that number from the new measurement. The key
+is back to 5632 and M6 ships **no** budget raise.
+
+Nothing above was acted on. Nothing was optimised for size. The entry shrank as a side effect
+of fixing the final review's Critical finding: `@sentra/flags` was never installed in console's
+federated entry (`apps/console/src/federated/register.ts`), so under the shell `useFlags()`
+fell through to `NULL_FLAGS` and no feature gate could ever open. Installing it there gave the
+flags runtime a *second* importer alongside `apps/console/src/main.ts`, and Rollup hoists a
+module shared by two entry points into a shared chunk instead of inlining it into each. The
+runtime left the entry for `federated-*.js`, which carries no glob budget of its own and is
+covered by `$total:js`.
+
+That was verified in the built output rather than inferred from the byte drop, because a
+968-byte fall is equally consistent with "the runtime moved" and with "something was dropped
+altogether": `'orders.bulkActions'` and `fnv1a`'s offset basis `2166136261` are both present in
+`federated-*.js` and in neither case in `index-*.js`, while `ui.dataTable.sortBy` is present in
+`index-*.js` and absent from `federated-*.js`. The catalogue never moved, so the locale analysis
+above remains true — it is simply no longer load-bearing, because the overage it explained no
+longer exists.
+
+Two things follow. First, the measured bound above was **right and still irrelevant**: it
+correctly established that no locale-side fix could close a 266-byte gap, and the gap closed
+anyway through a change made for unrelated correctness reasons. A bound on the fixes you
+thought to look for is not a bound on the outcomes available — which is the same limit this
+document already names about itself one paragraph earlier, arriving from the other direction.
+Second, the restored budget now sits 702 bytes above the measurement, so removing the federated
+flags wiring would push the runtime back into the entry and fail this gate. That is an accident
+of chunking, not a guard: the test that actually holds the Critical closed is
+`apps/console/src/federated/register.test.ts`, and this budget must not be cited as a substitute
+for it.
+
+An earlier revision of this section named the wrong cause: it said the console shipped its own
+`en`/`id` catalogues, and cited ADR 0011's lazy-splitting exclusion as though it also excluded
+dead-locale elimination. Both were false, and the correction is left visible here rather than
+rewritten away, because a policy demanding a challengeable record cannot make its own errors
+disappear.
+
+What this policy deliberately does not do is distinguish a raise from a regression by size.
+266 bytes over is not evidence of anything; a small breach caused by an accident is worse than
+a large one caused by a shipped feature. The distinguishing question is whether the growth was
+intended and is explained, which is a question about the record, not about the number.
+
 ## The audit allowlist: expiry fails even when the advisory is gone
 
 `security/audit-allowlist.json` accepts an advisory only with a `reason` and an `expires`

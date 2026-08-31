@@ -1,5 +1,7 @@
 import { loadRemote, registerRemotes } from '@module-federation/runtime'
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import { analyticsPlugin } from '@sentra/plugin-analytics'
+import { consoleSink, errorsPlugin, useErrors } from '@sentra/plugin-errors'
 import {
   createSessionPlugin,
   createShellBus,
@@ -7,6 +9,7 @@ import {
   type RemoteModule,
 } from '@sentra/shell-contract'
 import { RemoteUnavailable, toastPlugin, useToast } from '@sentra/ui'
+import { uiMessages } from '@sentra/ui/i18n'
 import { createPinia } from 'pinia'
 import { createApp, h, type Component } from 'vue'
 import { createRouter, createWebHistory, RouterView, type RouteRecordRaw } from 'vue-router'
@@ -196,6 +199,43 @@ export async function bootShell(): Promise<void> {
   app.use(toastPlugin)
   app.use(shellBusPlugin, bus)
   app.use(sessionPlugin)
+  app.use(errorsPlugin, { sink: consoleSink(), allowedContextKeys: ['name'] })
+  /*
+   * `errorsPlugin` provides its reporter synchronously in `install`, so it is
+   * available immediately — no need to wait for `app.mount()`.
+   * `app.runWithContext` is the sanctioned way to read an injection outside
+   * `setup()`; the toast subscriber below uses the same pattern for
+   * `useToast()`, and its own comment explains why.
+   */
+  const reporter = app.runWithContext(() => useErrors())
+
+  /**
+   * The shell consumes only `ui.*` keys, so it installs `@sentra/ui`'s
+   * catalogue and ships none of its own — see ADR 0005 §"Why the asymmetry is
+   * safe" for why a remote can still ship a different `@sentra/i18n`-backed
+   * instance without a version-negotiation failure.
+   *
+   * Installed before the registration loop below, not after:
+   * `outcome.module.register(app, ...)` hands each remote this same `app`
+   * instance, and a remote's own `app.provide(I18N_INJECTION_KEY, ...)`
+   * silently replaces whatever this install just provided, for every
+   * component in the app — not only the remote's own. This install has to
+   * exist first so there is something for `useI18n()` to resolve to before
+   * any remote decides to override it; a remote whose own instance is not a
+   * strict superset of `uiMessages` would silently break every other
+   * `ui.*`-consuming component the moment it registers. `onMissing` reports
+   * through the same reporter as the `remote:failed` subscribers below.
+   */
+  const i18n = createI18n({
+    locale: 'en',
+    fallbackLocale: 'en',
+    messages: uiMessages,
+    onMissing: (key, locale) => {
+      reporter.report(new Error(`missing translation: ${key}`), { key, locale })
+    },
+  })
+  app.use(i18nPlugin, i18n)
+
   /* `analyticsPlugin` is a plugin object, not a factory — it is installed
      as `app.use(analyticsPlugin, options)`, not
      `app.use(analyticsPlugin(options))`. */
@@ -238,7 +278,8 @@ export async function bootShell(): Promise<void> {
   app.mount('#app')
 
   /*
-   * `remote:failed` gets its one production subscriber here: a danger toast.
+   * `remote:failed` gets one of its two production subscribers here: a
+   * danger toast. (The other, the error reporter, subscribes below.)
    * `useToast()` is an injection, so it needs the app's context —
    * `app.runWithContext` is the sanctioned way to read one outside `setup()`,
    * the same pattern `apps/storefront/src/main.ts` and
@@ -263,6 +304,21 @@ export async function bootShell(): Promise<void> {
       description: reason,
       variant: 'danger',
     })
+  })
+
+  /*
+   * The shell subscribes, not the plugin. Keeping the subscription here means
+   * `@sentra/plugin-errors` takes no dependency on `@sentra/shell-contract`, and
+   * `ShellEventMap` stays closed at four events per ADR 0006.
+   *
+   * Unconditional, unlike the toast above: an error report is not a message
+   * to a human already looking at the screen, it is telemetry. Suppressing it
+   * for visitors whose first URL resolved to the broken remote's own fallback
+   * would silently drop reports from exactly the population with the highest
+   * signal — the people who actually tried to use the thing that is down.
+   */
+  bus.on('remote:failed', ({ name, reason }) => {
+    reporter.report(new Error(`remote "${name}" failed: ${reason}`), { name }, 'manual')
   })
 
   /* Now that the app is mounted and any remote's `register()` has had the

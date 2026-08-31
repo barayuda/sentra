@@ -21,7 +21,9 @@
     "init-msw": "msw init public --no-save"
   },
   "dependencies": {
+    "@sentra/i18n": "workspace:*",
     "@sentra/plugin-analytics": "workspace:*",
+    "@sentra/plugin-errors": "workspace:*",
     "@sentra/sdk-commerce": "workspace:*",
     "@sentra/shell-contract": "workspace:*",
     "@sentra/tokens": "workspace:*",
@@ -38,6 +40,7 @@
     "@playwright/test": "1.62.1",
     "@sentra/config": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
+    "@testing-library/user-event": "14.6.6",
     "@testing-library/vue": "8.1.0",
     "@vitejs/plugin-vue": "6.0.8",
     "@vitest/coverage-v8": "4.1.11",

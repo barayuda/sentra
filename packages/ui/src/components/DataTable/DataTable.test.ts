@@ -1,6 +1,8 @@
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import { render, screen, fireEvent } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
 import { h } from 'vue'
+import { uiMessages } from '../../i18n/index.ts'
 import DataTable from './DataTable.vue'
 import type { ColumnDef } from './columns.ts'
 
@@ -88,10 +90,16 @@ describe('DataTable', () => {
     const { emitted, rerender } = render(DataTable, {
       props: { columns, rows: manyRows.slice(0, 3) },
     })
-    await fireEvent.click(screen.getByRole('button', { name: /sort by name/i }))
+    /*
+     * No i18n is installed here, so the sort button's aria-label is the raw
+     * `ui.dataTable.sortBy` key (see `NULL_I18N` in `@sentra/i18n`), not the
+     * interpolated English string. `columns` has exactly one sortable column,
+     * so the query is still unambiguous.
+     */
+    await fireEvent.click(screen.getByRole('button', { name: 'ui.dataTable.sortBy' }))
     expect(emitted('update:sort')).toEqual([['name', 'asc']])
     await rerender({ columns, rows: manyRows.slice(0, 3), sortKey: 'name', sortDirection: 'asc' })
-    await fireEvent.click(screen.getByRole('button', { name: /sort by name/i }))
+    await fireEvent.click(screen.getByRole('button', { name: 'ui.dataTable.sortBy' }))
     expect(emitted('update:sort')[1]).toEqual(['name', 'desc'])
   })
 
@@ -115,7 +123,15 @@ describe('DataTable', () => {
     })
     expect(getByRole('table').getAttribute('aria-label')).toBe('Orders')
     const scroller = getByRole('table').querySelector('[tabindex="0"]')
-    expect(scroller?.getAttribute('aria-label')).toBe('Orders rows, scrollable')
+    /*
+     * No i18n is installed here, so `useI18n()` resolves to `NULL_I18N`,
+     * whose `t(key)` returns the key verbatim and ignores params. This
+     * pins that null-object behaviour, which every `@sentra/ui` consumer
+     * and every Storybook story depends on; the sibling `DataTable
+     * translation` suite below proves the interpolated string with i18n
+     * installed.
+     */
+    expect(scroller?.getAttribute('aria-label')).toBe('ui.dataTable.rowsScrollable')
   })
 
   /**
@@ -144,5 +160,36 @@ describe('DataTable', () => {
     const { rerender } = render(DataTable, { props: { columns, rows: [] } })
     await rerender({ columns, rows: manyRows.slice(0, 1) })
     expect(await screen.findByText('Product 0')).toBeTruthy()
+  })
+})
+
+describe('DataTable translation', () => {
+  it('interpolates the column into the Indonesian sort label', () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(DataTable, {
+      props: { columns, rows: manyRows.slice(0, 3) },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    expect(screen.getByLabelText('Urutkan berdasarkan Name')).toBeTruthy()
+  })
+
+  it('renders the translated empty state', () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(DataTable, {
+      props: { columns, rows: [] },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    expect(screen.getByText('Tidak ada baris untuk ditampilkan.')).toBeTruthy()
+  })
+
+  it('still lets a consumer override the empty slot', () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(DataTable, {
+      props: { columns, rows: [] },
+      slots: { empty: 'Nothing here' },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    expect(screen.getByText('Nothing here')).toBeTruthy()
+    expect(screen.queryByText('Tidak ada baris untuk ditampilkan.')).toBeNull()
   })
 })

@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="Row extends { id: string | number }">
+import { useI18n } from '@sentra/i18n'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { computed, useTemplateRef } from 'vue'
 import type { ColumnDef } from './columns.ts'
@@ -93,6 +94,8 @@ const emit = defineEmits<{
   'update:sort': [key: string, direction: 'asc' | 'desc']
 }>()
 
+const { t } = useI18n()
+
 const scrollRef = useTemplateRef<HTMLElement>('scroller')
 
 const virtualizer = useVirtualizer(
@@ -146,7 +149,7 @@ function cellValue(row: Row, column: ColumnDef<Row>): unknown {
           v-if="column.sortable"
           type="button"
           class="inline-flex items-center gap-1"
-          :aria-label="`Sort by ${column.header}`"
+          :aria-label="t('ui.dataTable.sortBy', { column: column.header })"
           @click="requestSort(column)"
         >
           {{ column.header }}
@@ -159,7 +162,7 @@ function cellValue(row: Row, column: ColumnDef<Row>): unknown {
     </div>
 
     <div v-show="rows.length === 0" class="px-3 py-8 text-center text-sm text-neutral-500">
-      <slot name="empty">No rows to display.</slot>
+      <slot name="empty">{{ t('ui.dataTable.empty') }}</slot>
     </div>
 
     <div
@@ -167,7 +170,7 @@ function cellValue(row: Row, column: ColumnDef<Row>): unknown {
       ref="scroller"
       role="rowgroup"
       tabindex="0"
-      :aria-label="`${label} rows, scrollable`"
+      :aria-label="t('ui.dataTable.rowsScrollable', { label })"
       class="overflow-auto"
       :style="{ height: `${heightPx}px` }"
     >

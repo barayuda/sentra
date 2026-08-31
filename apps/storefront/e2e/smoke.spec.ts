@@ -92,17 +92,37 @@ test.describe('storefront happy path', () => {
      */
     await page.goto('/')
     await page.getByTestId('product-card').first().getByRole('button').first().click()
+    /*
+     * Assert the route before the heading, exactly as the first test does at
+     * its own navigation. `getByRole('heading', { level: 1 })` alone cannot
+     * distinguish the product page from the listing, because BOTH render an
+     * `h1` (`CollectionView.vue:54` and `ProductView.vue:136`) — so on a slow
+     * navigation it passes against the collection heading and leaves the
+     * `Add to cart` lookup below as the first thing that actually waits for
+     * `ProductView`. That misplaces the timeout onto a line whose failure
+     * reads as "the button is broken" rather than "we never navigated".
+     */
+    await expect(page).toHaveURL(/\/products\//)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
+    /*
+     * Fail loudly if the mock bridge is missing. The `if` guard this replaces
+     * made an absent `window.sentraMocks` a silent no-op: the scenario would
+     * stay `ok`, the add would succeed, and the failure would surface below as
+     * a confusing assertion about the alert rather than as the missing
+     * precondition it actually is.
+     */
     await page.evaluate(() => {
-      if (window.sentraMocks) window.sentraMocks.scenario = 'network'
+      if (!window.sentraMocks) throw new Error('window.sentraMocks is not installed')
+      window.sentraMocks.scenario = 'network'
     })
     await page.getByRole('button', { name: 'Add to cart' }).click()
     await expect(page.getByRole('alert')).toContainText(/check your connection/i)
     await expect(page.getByRole('button', { name: /^Cart/ })).not.toContainText('(1)')
 
     await page.evaluate(() => {
-      if (window.sentraMocks) window.sentraMocks.scenario = 'ok'
+      if (!window.sentraMocks) throw new Error('window.sentraMocks is not installed')
+      window.sentraMocks.scenario = 'ok'
     })
     await page.getByRole('button', { name: 'Add to cart' }).click()
     await expect(page.getByRole('button', { name: /^Cart/ })).toContainText('(1)')

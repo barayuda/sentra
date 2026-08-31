@@ -1,5 +1,7 @@
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import { render, screen, fireEvent } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
+import { uiMessages } from '../../i18n/index.ts'
 import Combobox from './Combobox.vue'
 
 const options = [
@@ -130,7 +132,7 @@ describe('Combobox', () => {
     })
     await fireEvent.update(screen.getByRole('combobox'), 'in')
     await new Promise((r) => setTimeout(r))
-    expect(screen.getByRole('alert').textContent).toMatch(/could not load/i)
+    expect(screen.getByRole('alert').textContent).toMatch(/ui\.combobox\.loadFailed/)
   })
 
   it('does not open when disabled', async () => {
@@ -170,5 +172,37 @@ describe('Combobox', () => {
     const input = screen.getByRole('combobox')
     await fireEvent.keyDown(input, { key: 'ArrowDown' })
     expect(screen.getByRole('listbox').id).toBe(input.getAttribute('aria-controls'))
+  })
+
+  it('renders the translated loading state', async () => {
+    const { promise } = deferred<typeof options>()
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(Combobox, {
+      props: { label: 'Country', loadOptions: () => promise },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    await fireEvent.update(screen.getByRole('combobox'), 'in')
+    expect(screen.getByText('Memuat…')).toBeTruthy()
+  })
+
+  it('renders the translated no-matches state', async () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(Combobox, {
+      props: { label: 'Country', options },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    await fireEvent.update(screen.getByRole('combobox'), 'zzz')
+    expect(screen.getByText('Tidak ada hasil yang cocok')).toBeTruthy()
+  })
+
+  it('renders the translated load-failure alert', async () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(Combobox, {
+      props: { label: 'Country', loadOptions: () => Promise.reject(new Error('boom')) },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    await fireEvent.update(screen.getByRole('combobox'), 'in')
+    await new Promise((r) => setTimeout(r))
+    expect(screen.getByText('Pilihan gagal dimuat. Coba lagi.')).toBeTruthy()
   })
 })

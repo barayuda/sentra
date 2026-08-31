@@ -93,6 +93,12 @@ than one who read an honest list up front.
 **What you get:** a design-token pipeline with a generated CSS output
 (`@sentra/tokens`); an accessibility-gated Vue 3 component library (`@sentra/ui`);
 schema-validated, allowlist-only analytics as a Vue plugin (`@sentra/plugin-analytics`);
+locale-reactive `t`/`n`/`d` translation over `Intl`, plural categories per locale, a
+translated component library, and a CI gate on placeholder parity (`@sentra/i18n`); Vue,
+`window`, promise-rejection, and CSP-violation error sources behind a one-method
+`ErrorSink` that reports an allowlist-only shape collecting no identifiers
+(`@sentra/plugin-errors`); typed feature-flag keys with declared defaults that survive a
+backend outage, deterministic local bucketing, and dev-gated overrides (`@sentra/flags`);
 the federation host, its runtime remote registry, and the typed contract remotes register
 against (`apps/shell`, `@sentra/shell-contract`); shared tool configuration
 (`@sentra/config`); a CSP generated from the same manifest the shell loads remotes from; a
@@ -104,14 +110,18 @@ budgets, and a dependency-audit allowlist — each with a stated boundary in
 **What you must still build:**
 
 - An authentication backend or identity provider integration.
-- Internationalisation.
+- Internationalisation workflow: message extraction and the tooling around it, RTL
+  layout, gender/select syntax, and lazy catalogue splitting — `t`/`n`/`d` and the
+  catalogues ship; the translation *workflow* does not.
 - Server-side rendering or static generation.
-- An error-tracking or APM vendor.
+- An error-tracking or APM *vendor* — the sink is one method; the service behind it is
+  yours.
 - A design system beyond primitives and tokens.
 - An API gateway or a BFF.
 - A CMS integration.
 - Deployment and hosting configuration.
-- A feature-flag backend.
+- A feature-flag *backend* — the client evaluates, defaults and buckets locally; the
+  service that stores flags is yours.
 
 The reference implementation demonstrates one way to fill some of these gaps — a commerce
 SDK, a mock-first testing story, an ops console — but demonstrating one way is exactly why

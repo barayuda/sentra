@@ -1,6 +1,8 @@
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import { render, screen } from '@testing-library/vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick } from 'vue'
+import { uiMessages } from '../../i18n/index.ts'
 import ToastHost from './ToastHost.vue'
 import { toastPlugin, useToast } from './plugin.ts'
 import { createToastService } from './service.ts'
@@ -127,5 +129,27 @@ describe('ToastHost', () => {
     expect(toast.className).toContain('translate-y-2')
     expect(toast.className).toContain('opacity-0')
     expect(toast.className).toContain('duration-[var(--duration-normal)]')
+  })
+})
+
+describe('ToastHost translation', () => {
+  it('renders the Indonesian dismiss label', async () => {
+    const service = createToastService()
+    service.show({ title: 'Saved', durationMs: 0 })
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(ToastHost, {
+      global: {
+        provide: { 'sentra:toast': service },
+        plugins: [[i18nPlugin, i18n]],
+      },
+    })
+    expect(screen.getByLabelText('Tutup notifikasi')).toBeTruthy()
+  })
+
+  it('renders the raw key with no i18n installed, so the library still works uninstalled', async () => {
+    const service = createToastService()
+    service.show({ title: 'Saved', durationMs: 0 })
+    render(ToastHost, { global: { provide: { 'sentra:toast': service } } })
+    expect(screen.getByLabelText('ui.toast.dismiss')).toBeTruthy()
   })
 })
