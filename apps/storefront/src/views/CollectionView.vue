@@ -8,7 +8,7 @@ import { useRouter } from 'vue-router'
 import ProductGrid from '../components/ProductGrid.vue'
 import StateBlock from '../components/StateBlock.vue'
 import { DEFAULT_COLLECTION_HANDLE } from '../federated/routes.ts'
-import { errorCopy } from '../lib/errorCopy.ts'
+import { resolveErrorCopy } from '../lib/errorCopy.ts'
 
 /**
  * Collection listing.
@@ -32,7 +32,7 @@ const isInitialLoading = computed(() => loading.value && products.value.length =
 const blockingError = computed(() => (products.value.length === 0 ? error.value : null))
 const inlineError = computed(() => (products.value.length > 0 ? error.value : null))
 
-const copy = computed(() => (error.value ? errorCopy(error.value) : null))
+const copy = computed(() => (error.value ? resolveErrorCopy(t, error.value) : null))
 
 /** Reports failures by taxonomy kind — never by message; see analytics.ts. */
 watch(error, (next) => {

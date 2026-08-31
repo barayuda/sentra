@@ -11,6 +11,7 @@
   ],
   "exports": {
     ".": "./src/index.ts",
+    "./i18n": "./src/i18n/index.ts",
     "./styles.css": "./src/styles.css"
   },
   "scripts": {

@@ -30,5 +30,12 @@
   "storefront.collection.emptyTitle": "Belum ada apa apa di sini",
   "storefront.collection.emptyDetail": "Koleksi ini belum memiliki produk saat ini.",
   "storefront.collection.loadingMore": "Memuat produk lainnya…",
+  "storefront.error.network.title": "Kami tidak dapat menghubungi toko",
+  "storefront.error.network.detail": "Periksa koneksi Anda dan coba lagi.",
+  "storefront.error.throttled.title": "Toko sedang sibuk",
+  "storefront.error.throttled.detail": "Terlalu banyak permintaan saat ini — toko sedang sibuk. Coba lagi sebentar.",
+  "storefront.error.declined.title": "Permintaan itu ditolak",
+  "storefront.error.schema.title": "Terjadi kesalahan di sisi kami",
+  "storefront.error.schema.detail": "Kami telah mencatat masalah ini. Silakan coba lagi nanti.",
   "storefront.localeSwitcher.label": "Bahasa"
 }

@@ -6,7 +6,7 @@ import { Button, Money, Select, useToast, type SelectOption } from '@sentra/ui'
 import { computed, ref, watch } from 'vue'
 import RichText from '../components/RichText.vue'
 import StateBlock from '../components/StateBlock.vue'
-import { errorCopy } from '../lib/errorCopy.ts'
+import { resolveErrorCopy } from '../lib/errorCopy.ts'
 import { useCartStore } from '../stores/cart.ts'
 
 /**
@@ -47,7 +47,7 @@ const selectedVariant = computed(
 
 const canAdd = computed(() => selectedVariant.value?.availableForSale === true)
 
-const copy = computed(() => (error.value ? errorCopy(error.value) : null))
+const copy = computed(() => (error.value ? resolveErrorCopy(t, error.value) : null))
 const notFound = computed(() => !loading.value && !error.value && product.value === null)
 
 /** Selects the first variant and reports the view, once per loaded product. */
@@ -67,7 +67,7 @@ async function addToCart(): Promise<void> {
   if (!variant) return
   const added = await cart.addLine(variant.id, 1)
   if (!added) {
-    const failure = cart.error ? errorCopy(cart.error) : null
+    const failure = cart.error ? resolveErrorCopy(t, cart.error) : null
     toast.show({
       title: failure?.title ?? t('storefront.product.addToCartFailedTitle'),
       description: failure?.detail,

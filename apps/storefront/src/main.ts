@@ -4,7 +4,7 @@ import {
   instrumentRouter,
   useAnalytics,
 } from '@sentra/plugin-analytics'
-import { createI18n, i18nPlugin, mergeMessages } from '@sentra/i18n'
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import { createShellBus, shellBusPlugin } from '@sentra/shell-contract'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
@@ -13,7 +13,7 @@ import App from './App.vue'
 import { createStorefrontAnalyticsTransport, storefrontEventSchema } from './analytics.ts'
 import storefrontRemote from './federated/index.ts'
 import { readStoredLocale, syncDocumentLang, type SupportedLocale } from './i18n/locale.ts'
-import { storefrontMessages } from './i18n/index.ts'
+import { appMessages } from './i18n/index.ts'
 import { mocksEnabled } from './storefront.ts'
 
 /**
@@ -62,24 +62,10 @@ async function bootstrap(): Promise<void> {
   const app = createApp(App)
   const bus = createShellBus()
 
-  /*
-   * TEMPORARY GAP (flagged in the Task 6 report, not a silent workaround):
-   * the spec calls for `mergeMessages(uiMessages, storefrontMessages)`, but
-   * `@sentra/ui`'s package export (`"."` -> `src/index.ts`) does not
-   * re-export `uiMessages` from `src/i18n/index.ts`, and no `./i18n` subpath
-   * is declared in its `package.json` `exports`, so `uiMessages` cannot be
-   * imported from outside `packages/ui`. Fixing that means editing a file
-   * under `packages/`, which is out of this task's authorised scope. Until
-   * that export is added, this instance carries only the storefront's own
-   * catalogue — so any `@sentra/ui` component that calls `useI18n().t(...)`
-   * internally (`ToastHost`, rendered via `CartOverlay.vue`, is the one this
-   * app actually mounts) renders its raw `ui.*` key instead of translated
-   * text.
-   */
   const i18n = createI18n({
     locale: readStoredLocale() ?? 'en',
     fallbackLocale: 'en',
-    messages: mergeMessages(storefrontMessages),
+    messages: appMessages,
   })
   syncDocumentLang(i18n.locale.value as SupportedLocale)
 

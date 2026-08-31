@@ -4,7 +4,7 @@ import { useAnalytics } from '@sentra/plugin-analytics'
 import { shopifyImageUrl } from '@sentra/sdk-commerce'
 import { Button, Dialog, Money } from '@sentra/ui'
 import { computed } from 'vue'
-import { errorCopy } from '../lib/errorCopy.ts'
+import { resolveErrorCopy } from '../lib/errorCopy.ts'
 import { useCartStore } from '../stores/cart.ts'
 
 /**
@@ -42,7 +42,7 @@ const cart = useCartStore()
 const analytics = useAnalytics()
 const { t } = useI18n()
 
-const failure = computed(() => (cart.error ? errorCopy(cart.error) : null))
+const failure = computed(() => (cart.error ? resolveErrorCopy(t, cart.error) : null))
 
 /** Adjusts a line by a delta, routing zero through removal in the store. */
 async function adjust(lineId: string, quantity: number): Promise<void> {

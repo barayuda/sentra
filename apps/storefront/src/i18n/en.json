@@ -30,5 +30,12 @@
   "storefront.collection.emptyTitle": "Nothing here yet",
   "storefront.collection.emptyDetail": "This collection has no products at the moment.",
   "storefront.collection.loadingMore": "Loading more products…",
+  "storefront.error.network.title": "We couldn't reach the store",
+  "storefront.error.network.detail": "Check your connection and try again.",
+  "storefront.error.throttled.title": "The store is busy",
+  "storefront.error.throttled.detail": "Too many requests just now — the store is busy. Try again in a moment.",
+  "storefront.error.declined.title": "That request was declined",
+  "storefront.error.schema.title": "Something went wrong on our side",
+  "storefront.error.schema.detail": "We have logged the problem. Please try again later.",
   "storefront.localeSwitcher.label": "Language"
 }

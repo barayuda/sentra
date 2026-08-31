@@ -9,11 +9,11 @@
  * keeps tests isolated without reintroducing implicit globals. Mirrors
  * `packages/ui/vitest.setup.ts`.
  */
-import { createI18n, I18N_INJECTION_KEY, mergeMessages } from '@sentra/i18n'
+import { createI18n, I18N_INJECTION_KEY } from '@sentra/i18n'
 import { cleanup } from '@testing-library/vue'
 import { config } from '@vue/test-utils'
 import { afterEach } from 'vitest'
-import { storefrontMessages } from './src/i18n/index.ts'
+import { appMessages } from './src/i18n/index.ts'
 
 /**
  * Installs a real `@sentra/i18n` instance into every `render()` call by
@@ -33,17 +33,11 @@ import { storefrontMessages } from './src/i18n/index.ts'
  * `global.provide` before `global.plugins` (see its `createInstance`), so a
  * test's own `i18nPlugin` install still runs and correctly overrides this
  * default via the same injection key.
- *
- * TEMPORARY GAP (see `main.ts`'s matching comment, flagged in the Task 6
- * report): this only merges the storefront's own catalogue. `@sentra/ui`'s
- * `uiMessages` cannot be imported from outside `packages/ui` today, so any
- * `@sentra/ui` component under test that calls `useI18n().t(...)` internally
- * renders its raw `ui.*` key here too.
  */
 const testI18n = createI18n({
   locale: 'en',
   fallbackLocale: 'en',
-  messages: mergeMessages(storefrontMessages),
+  messages: appMessages,
 })
 
 config.global.provide = { ...config.global.provide, [I18N_INJECTION_KEY]: testI18n }

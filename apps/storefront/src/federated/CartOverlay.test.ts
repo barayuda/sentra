@@ -1,10 +1,11 @@
 import type { Cart, StorefrontClient } from '@sentra/sdk-commerce'
 import { ANALYTICS_INJECTION_KEY, type AnalyticsClient } from '@sentra/plugin-analytics'
 import { createShellBus, type ShellBus, shellBusPlugin } from '@sentra/shell-contract'
-import { toastPlugin } from '@sentra/ui'
+import { createToastService, TOAST_INJECTION_KEY, toastPlugin } from '@sentra/ui'
 import { DOMWrapper, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { setStorefrontClient } from '../storefront.ts'
 import { useCartStore } from '../stores/cart.ts'
 import CartOverlay from './CartOverlay.vue'
@@ -166,5 +167,32 @@ describe('CartOverlay', () => {
     bus.emit('cart:open-requested', { origin: 'test' })
 
     expect(analytics.calls).toEqual([['cart_open', { itemCount: CART.totalQuantity }]])
+  })
+
+  it('renders a translated dismiss label on a toast, not the raw ui.* key', async () => {
+    /*
+     * `toastPlugin` is deliberately absent: it provides its own service, and
+     * VTU applies `global.provide` before `global.plugins`, so installing the
+     * plugin would overwrite the service this test needs to push through.
+     *
+     * The assertion is on prose rather than on the button merely existing.
+     * `useI18n()` never throws — with no `ui.*` messages installed it returns
+     * the key itself — so "a dismiss button rendered" is true either way.
+     */
+    const toasts = createToastService()
+    const bus = createShellBus()
+    const wrapper = mount(CartOverlay, {
+      global: {
+        plugins: [[shellBusPlugin, bus]],
+        provide: {
+          [TOAST_INJECTION_KEY as unknown as string]: toasts,
+          [ANALYTICS_INJECTION_KEY as unknown as string]: stubAnalytics(),
+        },
+      },
+    })
+    toasts.show({ title: 'Added to cart', variant: 'success' })
+    await nextTick()
+    const dismiss = wrapper.get('button[aria-label]')
+    expect(dismiss.attributes('aria-label')).toBe('Dismiss notification')
   })
 })
