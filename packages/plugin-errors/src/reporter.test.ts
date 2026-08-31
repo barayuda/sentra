@@ -19,10 +19,26 @@ describe('createErrorReporter', () => {
      * from the engine), but nothing asserted the report actually carried it —
      * a bug that dropped or corrupted `stack` somewhere in the pipeline would
      * have passed this test regardless. `.stack` is engine-generated prose,
-     * not a fixed literal, so assert containment of the message rather than
-     * exact equality with `error.stack` (which `redact()` may also alter).
+     * not a fixed literal, so exact equality with `error.stack` is too
+     * brittle to assert (`redact()` may also alter it).
+     *
+     * Containment of the message alone is too weak in the other direction:
+     * a V8 stack *begins with* `Error: boom`, so `toContain('boom')` also
+     * passes when `describe()` copies `message` into `stack` — the exact bug
+     * an assertion on `stack` exists to catch. Verified: mutating
+     * `reporter.ts:34`'s `stack: error.stack` to `stack: error.message` left
+     * all 12 tests in this file green. So assert both halves — that the stack
+     * belongs to *this* error, and that it is a stack at all. Only the frame
+     * pattern is unsatisfiable by a message.
+     *
+     * The mutation was not invisible to the package as a whole: it also turns
+     * `report.test.ts`'s `fingerprintOf` case red, because the fingerprint is
+     * derived from the stack. That is incidental coverage of a different unit,
+     * not this test doing its job — but it means the gap was a weak assertion
+     * here rather than a bug that could have shipped unnoticed.
      */
     expect(sink.reports[0]?.stack).toContain('boom')
+    expect(sink.reports[0]?.stack).toMatch(/\n\s+at /)
   })
 
   it('redacts the message', () => {
