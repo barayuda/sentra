@@ -98,3 +98,28 @@ describe('bootShell — remote:failed toast subscriber', () => {
     expect(alerts[0]?.textContent).toContain('console is unavailable')
   })
 })
+
+describe('bootShell — remote:failed error reporter subscriber', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="app"></div>'
+  })
+
+  afterEach(() => {
+    cleanup()
+    document.body.innerHTML = ''
+    vi.clearAllMocks()
+  })
+
+  it('reports a failed remote through the error reporter', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await bootAt('/shop')
+    expect(spy).toHaveBeenCalledWith(
+      '[errors]',
+      expect.objectContaining({
+        kind: 'manual',
+        message: expect.stringContaining('console'),
+      }),
+    )
+    spy.mockRestore()
+  })
+})

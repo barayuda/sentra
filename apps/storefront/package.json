@@ -23,6 +23,7 @@
   "dependencies": {
     "@sentra/i18n": "workspace:*",
     "@sentra/plugin-analytics": "workspace:*",
+    "@sentra/plugin-errors": "workspace:*",
     "@sentra/sdk-commerce": "workspace:*",
     "@sentra/shell-contract": "workspace:*",
     "@sentra/tokens": "workspace:*",

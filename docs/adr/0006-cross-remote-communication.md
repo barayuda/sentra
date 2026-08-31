@@ -29,7 +29,7 @@ four events:
 | `cart:updated` | `{ totalQuantity: number }` | remote → shell |
 | `cart:open-requested` | `{ origin: string }` | shell → remote |
 | `session:changed` | `{ session: Session \| null }` | shell → remotes |
-| `remote:failed` | `{ name: string; reason: string }` | shell → (published; no application subscriber today) |
+| `remote:failed` | `{ name: string; reason: string }` | shell → (published; two shell-owned subscribers) |
 
 The bus instance travels to a remote through `RemoteContext.register(app, ctx)` — the one
 call every `RemoteModule` implements, and the same call each remote's own standalone
@@ -42,11 +42,18 @@ shell present.
 `remote:failed` is emitted by the shell itself, after `app.mount()`, when a remote failed
 to load or register during boot (`boot.ts`) — it is verified in
 `packages/shell-contract/src/bus.test.ts`, and every current failure is also logged
-directly to `console.error` at the emission site. No shipped component currently
-subscribes to it; it exists as part of the closed contract for a future banner or toast
-to consume, not as a currently-wired notification path. Stated here rather than implied,
-because an ADR that describes a subscriber that does not exist would be a confident wrong
-answer to the exact question a review would ask.
+directly to `console.error` at the emission site. It has two production subscribers, both
+in `boot.ts`, both registered by the shell rather than by `@sentra/plugin-errors` or any
+remote — a danger toast, present since the shell's toast work predating this milestone,
+and an error reporter, added in M6. The shell owns the reporter subscription rather than
+the plugin taking a dependency on it, so `@sentra/plugin-errors` takes no dependency on
+`@sentra/shell-contract`. The two differ in their filtering: the toast suppresses the
+duplicate a `RemoteUnavailable` page already shows to whoever is looking straight at it,
+while the reporter does not, because telemetry that drops the failures users actually hit
+is worse than telemetry that repeats itself. Stated here rather than implied, because an
+ADR that describes a subscriber that does not exist would be a confident wrong answer to
+the exact question a review would ask — and, symmetrically, so would an ADR that still
+claimed an absence that no longer exists.
 
 ## Bidirectionality
 
@@ -123,9 +130,11 @@ drift.
   in full.
 - `cart:updated`'s emission and `cart:open-requested`'s handling confirmed in
   `apps/shell/src/components/ShellHeader.vue`.
-- `remote:failed`'s emission site and its lack of a production subscriber confirmed by
-  reading `apps/shell/src/registry/boot.ts` in full and grepping `remote:failed` across
-  `apps/shell/src` and `packages/shell-contract/src` — the only matches outside `boot.ts`
-  and the type declaration are `packages/shell-contract/src/bus.test.ts`.
+- `remote:failed`'s emission site and its two production subscribers — the danger toast
+  and the error reporter, both in `boot.ts` — confirmed by reading
+  `apps/shell/src/registry/boot.ts` in full and grepping `remote:failed` across
+  `apps/shell/src` and `packages/shell-contract/src`; the matches outside `boot.ts` and the
+  type declaration are `packages/shell-contract/src/bus.test.ts`,
+  `apps/shell/src/registry/boot.test.ts`, and `packages/shell-contract/src/manifest.ts`.
 - The existence of both `ShellHeader.vue` and `AppHeader.vue`, and that neither re-exports
   or wraps the other, confirmed by reading both files.

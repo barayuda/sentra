@@ -1,5 +1,6 @@
 import { loadRemote, registerRemotes } from '@module-federation/runtime'
 import { analyticsPlugin } from '@sentra/plugin-analytics'
+import { consoleSink, errorsPlugin, useErrors } from '@sentra/plugin-errors'
 import {
   createSessionPlugin,
   createShellBus,
@@ -196,6 +197,15 @@ export async function bootShell(): Promise<void> {
   app.use(toastPlugin)
   app.use(shellBusPlugin, bus)
   app.use(sessionPlugin)
+  app.use(errorsPlugin, { sink: consoleSink(), allowedContextKeys: ['name'] })
+  /*
+   * `errorsPlugin` provides its reporter synchronously in `install`, so it is
+   * available immediately — no need to wait for `app.mount()`.
+   * `app.runWithContext` is the sanctioned way to read an injection outside
+   * `setup()`; the toast subscriber below uses the same pattern for
+   * `useToast()`, and its own comment explains why.
+   */
+  const reporter = app.runWithContext(() => useErrors())
   /* `analyticsPlugin` is a plugin object, not a factory — it is installed
      as `app.use(analyticsPlugin, options)`, not
      `app.use(analyticsPlugin(options))`. */
@@ -238,7 +248,8 @@ export async function bootShell(): Promise<void> {
   app.mount('#app')
 
   /*
-   * `remote:failed` gets its one production subscriber here: a danger toast.
+   * `remote:failed` gets one of its two production subscribers here: a
+   * danger toast. (The other, the error reporter, subscribes below.)
    * `useToast()` is an injection, so it needs the app's context —
    * `app.runWithContext` is the sanctioned way to read one outside `setup()`,
    * the same pattern `apps/storefront/src/main.ts` and
@@ -263,6 +274,21 @@ export async function bootShell(): Promise<void> {
       description: reason,
       variant: 'danger',
     })
+  })
+
+  /*
+   * The shell subscribes, not the plugin. Keeping the subscription here means
+   * `@sentra/plugin-errors` takes no dependency on `@sentra/shell-contract`, and
+   * `ShellEventMap` stays closed at four events per ADR 0006.
+   *
+   * Unconditional, unlike the toast above: an error report is not a message
+   * to a human already looking at the screen, it is telemetry. Suppressing it
+   * for visitors whose first URL resolved to the broken remote's own fallback
+   * would silently drop reports from exactly the population with the highest
+   * signal — the people who actually tried to use the thing that is down.
+   */
+  bus.on('remote:failed', ({ name, reason }) => {
+    reporter.report(new Error(`remote "${name}" failed: ${reason}`), { name }, 'manual')
   })
 
   /* Now that the app is mounted and any remote's `register()` has had the

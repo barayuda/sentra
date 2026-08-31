@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test'
 
 /*
- * Asserts on a product-specific translated string rather than "some Indonesian
- * text exists", and on `<html lang>` — the attribute the axe `html-has-lang`
- * rule reads. A switcher that changes copy but leaves `lang="en"` is a real
+ * Asserts on a specific translated string from the storefront's own catalogue
+ * — the cart button's Indonesian label — rather than "some Indonesian text
+ * exists", and on `<html lang>` — the attribute the axe `html-has-lang` rule
+ * reads. A switcher that changes copy but leaves `lang="en"` is a real
  * accessibility defect that a copy-only assertion would pass.
  */
 test('switching to Indonesian translates the page and updates the lang attribute', async ({
