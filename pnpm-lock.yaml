@@ -55,6 +55,9 @@ importers:
       '@sentra/flags':
         specifier: workspace:*
         version: link:../../packages/flags
+      '@sentra/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@sentra/plugin-analytics':
         specifier: workspace:*
         version: link:../../packages/plugin-analytics

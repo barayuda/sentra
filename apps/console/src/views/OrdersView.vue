@@ -85,6 +85,8 @@ const columns: ColumnDef<OrderSummary>[] = [
           v-if="flags.isOn('orders.bulkActions')"
           type="button"
           data-testid="orders-bulk-actions"
+          disabled
+          title="Coming soon"
           class="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
           Bulk actions

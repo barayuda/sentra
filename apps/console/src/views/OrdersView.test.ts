@@ -1,12 +1,21 @@
 import { createFlagClient, type FlagClient, type FlagSource } from '@sentra/flags'
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import { analyticsPlugin, type Transport } from '@sentra/plugin-analytics'
 import type { OpsClient } from '@sentra/sdk-ops'
+import { uiMessages } from '@sentra/ui/i18n'
 import { render, screen, waitFor } from '@testing-library/vue'
 import { describe, expect, it, vi } from 'vitest'
 import { consoleEventSchema } from '../analytics.ts'
 import { CONSOLE_FLAGS } from '../flags.ts'
 import { opsPlugin } from '../ops.ts'
 import OrdersView from './OrdersView.vue'
+
+/**
+ * Matches `main.ts`'s install exactly: `uiMessages`, `locale: 'en'`, no
+ * `onMissing`. One instance shared across the file — nothing here asserts on
+ * a per-render i18n state.
+ */
+const i18n = createI18n({ locale: 'en', fallbackLocale: 'en', messages: uiMessages })
 
 const PAGE = {
   orders: [
@@ -53,6 +62,7 @@ function renderView(client: OpsClient, flagsClient?: FlagClient<string>) {
       plugins: [
         [opsPlugin, client],
         [analyticsPlugin, { schema: consoleEventSchema, transport: stubTransport }],
+        [i18nPlugin, i18n],
       ],
       provide: flagsClient ? { 'sentra:flags': flagsClient } : {},
     },
@@ -91,6 +101,14 @@ describe('OrdersView', () => {
      */
     expect(listOrders.mock.calls[1]?.[0]).toMatchObject({ sort: 'reference' })
     expect(listOrders.mock.calls[1]?.[0]).not.toHaveProperty('cursor')
+  })
+
+  it('announces the sort control by its translated name, not the catalogue key', async () => {
+    renderView(clientWith({}))
+    await screen.findByText('SEN-1042')
+
+    expect(await screen.findByRole('button', { name: 'Sort by Reference' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'ui.dataTable.sortBy' })).toBeNull()
   })
 
   it('shows an error and keeps the previous rows when a refresh fails', async () => {

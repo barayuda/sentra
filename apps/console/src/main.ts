@@ -1,4 +1,5 @@
 import { createFlagClient, flagsPlugin } from '@sentra/flags'
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import {
   analyticsPlugin,
   captureWebVitals,
@@ -7,6 +8,7 @@ import {
 } from '@sentra/plugin-analytics'
 import { consoleSink, errorsPlugin, useErrors } from '@sentra/plugin-errors'
 import { createShellBus, shellBusPlugin } from '@sentra/shell-contract'
+import { uiMessages } from '@sentra/ui/i18n'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -14,7 +16,7 @@ import App from './App.vue'
 import { consoleEventSchema, createConsoleAnalyticsTransport } from './analytics.ts'
 import consoleRemote from './federated/index.ts'
 import { CONSOLE_FLAGS, createOpsFlagSource } from './flags.ts'
-import { createConsoleOpsClient, opsPlugin } from './ops.ts'
+import { useOps } from './ops.ts'
 
 /**
  * Whether this build serves data from MSW fixtures.
@@ -71,31 +73,19 @@ async function bootstrap(): Promise<void> {
 
   const app = createApp(App)
   const bus = createShellBus()
-  const opsClient = createConsoleOpsClient()
-
-  app.use(createPinia())
-  app.use(router)
-  app.use(shellBusPlugin, bus)
-  /*
-   * Installed before `consoleRemote.register`, which also installs
-   * `opsPlugin` for standalone use: `app.use()` dedupes by plugin identity,
-   * so registering it here first keeps a single ops client for the whole
-   * app — the same one `createOpsFlagSource` reads below — rather than
-   * letting `register` construct a second, independent instance.
-   */
-  app.use(opsPlugin, opsClient)
-  app.use(analyticsPlugin, {
-    schema: consoleEventSchema,
-    transport: createConsoleAnalyticsTransport(),
-  })
-  consoleRemote.register(app, { bus, basePath: '' })
 
   /*
-   * Installed before the flags plugin so `onError`, below, has a reporter to
-   * route into. This is the same composition pattern the storefront uses for
-   * i18n (`apps/storefront/src/main.ts`), applied here to a different battery.
+   * Installed first, before anything else, so that every later `app.use()`
+   * runs inside its capture path: `installErrorSources`
+   * (`packages/plugin-errors/src/sources.ts:19-51`) is what wires
+   * `app.config.errorHandler` and the `window`/`document` listeners, and
+   * until it installs there is no capture path at all. If any later install
+   * throws, `bootstrap()`'s remaining body never runs, so the throw would
+   * otherwise escape as an unhandled rejection with nothing listening. Both
+   * `onError` (flags) and `onMissing` (i18n) route into the reporter this
+   * install provides.
    */
-  app.use(errorsPlugin, { sink: consoleSink(), allowedContextKeys: ['view'] })
+  app.use(errorsPlugin, { sink: consoleSink(), allowedContextKeys: ['view', 'key', 'locale'] })
 
   /**
    * `errorsPlugin` owns its reporter, so retrieving it outside a component
@@ -105,6 +95,41 @@ async function bootstrap(): Promise<void> {
    * component sees.
    */
   const reporter = app.runWithContext(() => useErrors())
+
+  app.use(createPinia())
+  app.use(router)
+  app.use(shellBusPlugin, bus)
+  app.use(analyticsPlugin, {
+    schema: consoleEventSchema,
+    transport: createConsoleAnalyticsTransport(),
+  })
+  consoleRemote.register(app, { bus, basePath: '' })
+
+  /**
+   * `consoleRemote.register` already installed `opsPlugin` with a client
+   * (`apps/console/src/federated/register.ts:18`); retrieve that one rather
+   * than constructing a second, independent client that would be discarded
+   * unused.
+   */
+  const opsClient = app.runWithContext(() => useOps())
+
+  /**
+   * The console consumes only `ui.*` keys, so it installs `@sentra/ui`'s
+   * catalogue and ships none of its own. Locale is fixed at `'en'` to match
+   * `index.html`. `onMissing` reports through the same reporter as the flags
+   * `onError` above — see `apps/storefront/src/main.ts:28-34` for the richer
+   * `missingTranslationError` treatment that distinguishes a missing key from
+   * an unmatched placeholder; deliberately not duplicated here.
+   */
+  const i18n = createI18n({
+    locale: 'en',
+    fallbackLocale: 'en',
+    messages: uiMessages,
+    onMissing: (key, locale) => {
+      reporter.report(new Error(`missing translation: ${key}`), { key, locale })
+    },
+  })
+  app.use(i18nPlugin, i18n)
 
   const flags = createFlagClient({
     declarations: CONSOLE_FLAGS,
