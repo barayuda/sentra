@@ -54,6 +54,38 @@ must not fail the same way an *unbuilt* directory does (a real broken CI run). A
 bundle-size tool has no concept of a workspace member that is allowed to not exist; this
 platform's gate needed one built in.
 
+## Raising a budget is a recorded event, not a silent edit
+
+A resource budget that can be edited to match whatever the build currently produces is not a
+budget. But a budget that may never move is worse in a different way: it turns every
+deliberate, justified increase into pressure to either abandon the feature or quietly disable
+the gate — and a gate disabled once stays disabled, which is the failure this ADR's opening
+warns about. The policy is therefore neither "never raise" nor "raise on red", but: **a raise
+is allowed, and it must leave behind enough of a record that a later reader can disagree with
+it.**
+
+Three things make a raise legitimate. The new number must be derived by the rule already
+stated in `bundle-budgets.json`'s `$comment` (round the measurement up to the next whole
+kilobyte, add ten percent, round any fractional byte up) rather than chosen to clear the
+measurement by a comfortable margin. The measurement must be recorded with the commit it was
+taken at, because a byte count without a commit cannot be re-derived. And the *cause* of the
+growth must be named, so that the raise can be challenged on its merits — "this app now ships
+three more packages and their catalogues" invites a reader to ask whether it should, whereas
+"the budget was too tight" invites nothing.
+
+**M6 raised exactly one key under this policy**: `apps/console`'s `assets/index-*.js`, from
+5632 to 6759, measured at 5898 bytes gzipped. The derivation, the commit, the cause, and the
+two entry chunks that grew without breaching are all recorded in that file's `$comment`. A
+code fix was considered and rejected on the ground that the only available one — splitting the
+`en`/`id` catalogues out of the entry chunk — is an approach ADR 0011 explicitly places
+outside M6's scope, so applying it here would have contradicted a decision taken in the same
+milestone.
+
+What this policy deliberately does not do is distinguish a raise from a regression by size.
+266 bytes over is not evidence of anything; a small breach caused by an accident is worse than
+a large one caused by a shipped feature. The distinguishing question is whether the growth was
+intended and is explained, which is a question about the record, not about the number.
+
 ## The audit allowlist: expiry fails even when the advisory is gone
 
 `security/audit-allowlist.json` accepts an advisory only with a `reason` and an `expires`
