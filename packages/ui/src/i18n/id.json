@@ -1,0 +1,7 @@
+{
+  "ui.toast.dismiss": "Tutup notifikasi",
+  "ui.dataTable.sortBy": "Urutkan berdasarkan {column}",
+  "ui.dataTable.empty": "Tidak ada baris untuk ditampilkan.",
+  "ui.dataTable.rowsScrollable": "Baris {label}, dapat digulir",
+  "ui.combobox.loading": "Memuat…"
+}

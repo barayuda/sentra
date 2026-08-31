@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@sentra/i18n'
 import { computed, ref, useId, watch } from 'vue'
 import { FIELD_CLASSES, FOCUS_CLASSES, SIZE_CLASSES, type Size } from '../../shared/controls.ts'
 import { POPOVER_MOTION } from '../../shared/motion.ts'
@@ -46,6 +47,8 @@ const emit = defineEmits<{
   /** Emitted with the chosen option's value. */
   'update:modelValue': [value: string]
 }>()
+
+const { t } = useI18n()
 
 const fieldId = useId()
 const listboxId = `${fieldId}-listbox`
@@ -207,7 +210,9 @@ function onKeydown(event: KeyboardEvent): void {
           :aria-busy="isLoading || undefined"
           class="absolute z-[var(--z-index-dropdown)] mt-1 max-h-60 w-full overflow-auto rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-md"
         >
-          <li v-if="isLoading" class="px-3 py-2 text-sm text-neutral-500">Loading…</li>
+          <li v-if="isLoading" class="px-3 py-2 text-sm text-neutral-500">
+            {{ t('ui.combobox.loading') }}
+          </li>
           <li
             v-for="(option, index) in visibleOptions"
             v-else

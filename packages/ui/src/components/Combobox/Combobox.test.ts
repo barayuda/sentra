@@ -1,5 +1,7 @@
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import { render, screen, fireEvent } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
+import { uiMessages } from '../../i18n/index.ts'
 import Combobox from './Combobox.vue'
 
 const options = [
@@ -170,5 +172,16 @@ describe('Combobox', () => {
     const input = screen.getByRole('combobox')
     await fireEvent.keyDown(input, { key: 'ArrowDown' })
     expect(screen.getByRole('listbox').id).toBe(input.getAttribute('aria-controls'))
+  })
+
+  it('renders the translated loading state', async () => {
+    const { promise } = deferred<typeof options>()
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(Combobox, {
+      props: { label: 'Country', loadOptions: () => promise },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    await fireEvent.update(screen.getByRole('combobox'), 'in')
+    expect(screen.getByText('Memuat…')).toBeTruthy()
   })
 })

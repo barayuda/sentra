@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@sentra/i18n'
 import { useToast } from './plugin.ts'
 import { TOAST_MOTION } from '../../shared/motion.ts'
 
@@ -8,6 +9,7 @@ import { TOAST_MOTION } from '../../shared/motion.ts'
  * render the same queue.
  */
 const service = useToast()
+const { t } = useI18n()
 
 const VARIANT_CLASSES: Record<string, string> = {
   info: 'border-neutral-300 bg-neutral-50 text-neutral-900',
@@ -47,7 +49,7 @@ const VARIANT_CLASSES: Record<string, string> = {
         <button
           type="button"
           class="text-sm text-neutral-500 hover:text-neutral-900"
-          aria-label="Dismiss notification"
+          :aria-label="t('ui.toast.dismiss')"
           @click="service.dismiss(toast.id)"
         >
           ✕

@@ -1,0 +1,7 @@
+{
+  "ui.toast.dismiss": "Dismiss notification",
+  "ui.dataTable.sortBy": "Sort by {column}",
+  "ui.dataTable.empty": "No rows to display.",
+  "ui.dataTable.rowsScrollable": "{label} rows, scrollable",
+  "ui.combobox.loading": "Loading…"
+}
