@@ -87,7 +87,13 @@ function resolveFlag(
  *
  * `refresh()` never throws: a rejected `source.load` is reported through
  * `onError` (when given) and the last good snapshot — the declared defaults
- * on the very first call — is kept rather than discarded.
+ * on the very first call — is kept rather than discarded. `ready` settles to
+ * `true` once that attempt has completed, whether or not it succeeded, so a
+ * source that always rejects still lets a `v-if="flags.ready.value"` render
+ * proceed with declared defaults instead of staying suspended forever.
+ *
+ * Overrides are read once, at construction; a change to the query string or
+ * `localStorage` takes effect only for a client built after the change.
  */
 export function createFlagClient<D extends FlagDeclarations>(
   options: CreateFlagClientOptions<D>,
@@ -113,9 +119,10 @@ export function createFlagClient<D extends FlagDeclarations>(
       const sourceContext = buildSourceContext(options.context, options.allowedAttributeKeys)
       const values = await options.source.load(sourceContext)
       snapshot.value = values
-      ready.value = true
     } catch (error) {
       options.onError?.(error)
+    } finally {
+      ready.value = true
     }
   }
 

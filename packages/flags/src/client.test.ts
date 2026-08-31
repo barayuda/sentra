@@ -10,8 +10,18 @@ const declarations = {
 
 const never: FlagSource = { load: () => new Promise(() => undefined) }
 
+/**
+ * Sets the address bar's query string via `window.history.replaceState`, the
+ * same mechanism `overrides.test.ts` uses to control `window.location.search`
+ * under happy-dom.
+ */
+function setQuery(search: string): void {
+  window.history.replaceState(null, '', search ? `/?${search}` : '/')
+}
+
 describe('createFlagClient', () => {
   beforeEach(() => {
+    setQuery('')
     localStorage.clear()
   })
 
@@ -31,6 +41,16 @@ describe('createFlagClient', () => {
     await client.refresh()
     expect(client.isOn('checkout.express')).toBe(true)
     expect(client.ready.value).toBe(true)
+  })
+
+  it('settles ready on a failed load, not just a successful one', async () => {
+    const source: FlagSource = { load: async () => Promise.reject(new Error('down')) }
+    const onError = vi.fn()
+    const client = createFlagClient({ declarations, source, onError })
+    await client.refresh()
+    expect(client.ready.value).toBe(true)
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(client.isOn('checkout.express')).toBe(false)
   })
 
   it('keeps declared defaults for keys the source omits', async () => {
@@ -64,15 +84,29 @@ describe('createFlagClient', () => {
     expect(client.isOn('checkout.express')).toBe(false)
   })
 
-  it('buckets a numeric source value against the stableId', async () => {
-    const source: FlagSource = { load: async () => ({ 'checkout.express': 100 }) }
-    const client = createFlagClient({
+  it('buckets a numeric source value against the stableId, partitioning below/above/at the rollout', async () => {
+    /*
+     * Bucket values below are computed from `bucket()` in `./bucket.ts`
+     * itself (not re-derived from the rollout being tested, which would make
+     * the assertion circular): bucket('user-1:checkout.express') === 24,
+     * bucket('user-6:checkout.express') === 95,
+     * bucket('user-30:checkout.express') === 54. A rollout of 54 puts
+     * 'user-1' strictly below, 'user-6' strictly above, and 'user-30' exactly
+     * on the boundary — which must resolve to `false` because resolution
+     * uses `<`, not `<=`.
+     */
+    const source: FlagSource = { load: async () => ({ 'checkout.express': 54 }) }
+    const belowClient = createFlagClient({ declarations, source, context: { stableId: 'user-1' } })
+    const aboveClient = createFlagClient({ declarations, source, context: { stableId: 'user-6' } })
+    const boundaryClient = createFlagClient({
       declarations,
       source,
-      context: { stableId: 'user-1' },
+      context: { stableId: 'user-30' },
     })
-    await client.refresh()
-    expect(client.isOn('checkout.express')).toBe(true)
+    await Promise.all([belowClient.refresh(), aboveClient.refresh(), boundaryClient.refresh()])
+    expect(belowClient.isOn('checkout.express')).toBe(true)
+    expect(aboveClient.isOn('checkout.express')).toBe(false)
+    expect(boundaryClient.isOn('checkout.express')).toBe(false)
   })
 
   it('returns the declared default for a rollout with no stableId', async () => {

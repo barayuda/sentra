@@ -45,5 +45,11 @@ export interface CreateFlagClientOptions<D extends FlagDeclarations> {
 export interface FlagClient<K extends string> {
   isOn(key: K): boolean
   refresh(): Promise<void>
+  /**
+   * `true` once at least one load attempt has completed, successfully or
+   * not. `isOn()` is safe to call before that and returns declared defaults.
+   * A consumer that needs to distinguish a failed load from a successful one
+   * uses `onError`.
+   */
   readonly ready: Ref<boolean>
 }
