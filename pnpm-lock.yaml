@@ -134,6 +134,9 @@ importers:
       '@module-federation/runtime':
         specifier: 2.9.0
         version: 2.9.0
+      '@sentra/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@sentra/plugin-analytics':
         specifier: workspace:*
         version: link:../../packages/plugin-analytics

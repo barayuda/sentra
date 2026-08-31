@@ -23,7 +23,8 @@ identity" indistinguishable.
 
 `vue`, `vue-router`, and `pinia` are `singleton: true` in every container's federation
 config — the host and both remotes agree on this. `@sentra/*` packages
-(`@sentra/ui`, `@sentra/tokens`, `@sentra/shell-contract`) are `singleton: false`.
+(`@sentra/ui`, `@sentra/tokens`, `@sentra/shell-contract`, `@sentra/i18n`,
+`@sentra/plugin-errors`, `@sentra/flags`) are `singleton: false`.
 `apps/shell/vite.config.ts` states this split explicitly:
 
 ```ts
@@ -34,6 +35,9 @@ shared: {
   '@sentra/ui': { singleton: false },
   '@sentra/tokens': { singleton: false },
   '@sentra/shell-contract': { singleton: false },
+  '@sentra/i18n': { singleton: false },
+  '@sentra/plugin-errors': { singleton: false },
+  '@sentra/flags': { singleton: false },
 },
 ```
 
@@ -52,6 +56,9 @@ Every `sentra:`-namespaced injection key in the workspace is a **string**, not a
 | `'sentra:session'` | `packages/shell-contract/src/session.ts` |
 | `'sentra:ops'` | `apps/console/src/ops.ts` |
 | `'sentra:remote-overlays'` | `apps/shell/src/remote-overlays.ts` |
+| `'sentra:i18n'` | `packages/i18n/src/vue.ts` |
+| `'sentra:errors'` | `packages/plugin-errors/src/vue.ts` |
+| `'sentra:flags'` | `packages/flags/src/vue.ts` |
 
 Each is declared the same way — a plain string, cast to a typed `InjectionKey` for the
 type-checker's benefit only, e.g. `packages/plugin-analytics/src/plugin.ts`:

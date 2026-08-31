@@ -4,7 +4,7 @@ import {
   instrumentRouter,
   useAnalytics,
 } from '@sentra/plugin-analytics'
-import { createI18n, i18nPlugin } from '@sentra/i18n'
+import { i18nPlugin } from '@sentra/i18n'
 import { consoleSink, errorsPlugin, useErrors } from '@sentra/plugin-errors'
 import { createShellBus, shellBusPlugin } from '@sentra/shell-contract'
 import { createPinia } from 'pinia'
@@ -13,25 +13,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import { createStorefrontAnalyticsTransport, storefrontEventSchema } from './analytics.ts'
 import storefrontRemote from './federated/index.ts'
-import { readStoredLocale, syncDocumentLang, type SupportedLocale } from './i18n/locale.ts'
-import { appMessages } from './i18n/index.ts'
+import { syncDocumentLang, type SupportedLocale } from './i18n/locale.ts'
+import { createStorefrontI18n } from './i18n/index.ts'
 import { mocksEnabled } from './storefront.ts'
-
-/**
- * `onMissing` (`packages/i18n/src/types.ts:41-45`) fires for two different
- * failures through the same hook: a key with no message in either locale, and
- * a placeholder with no matching parameter, in which case `key` arrives as
- * `` `${key}:${name}` ``. Reporting both as "missing translation: <key>" would
- * make the second case read as a catalogue entry that was never missing —
- * naming the parameter and the actual key separately says what really failed.
- */
-function missingTranslationError(key: string): Error {
-  const separator = key.indexOf(':')
-  if (separator === -1) return new Error(`missing translation: ${key}`)
-  const messageKey = key.slice(0, separator)
-  const param = key.slice(separator + 1)
-  return new Error(`missing interpolation parameter "${param}" for translation: ${messageKey}`)
-}
 
 /**
  * vue-router rejects a relative `path` on a top-level route record — only
@@ -87,14 +71,7 @@ async function bootstrap(): Promise<void> {
   app.use(errorsPlugin, { sink: consoleSink(), allowedContextKeys: ['key', 'locale'] })
   const reporter = app.runWithContext(() => useErrors())
 
-  const i18n = createI18n({
-    locale: readStoredLocale() ?? 'en',
-    fallbackLocale: 'en',
-    messages: appMessages,
-    onMissing: (key, locale) => {
-      reporter.report(missingTranslationError(key), { key, locale })
-    },
-  })
+  const i18n = createStorefrontI18n(reporter)
   syncDocumentLang(i18n.locale.value as SupportedLocale)
 
   app.use(createPinia())

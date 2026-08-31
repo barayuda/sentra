@@ -1,4 +1,5 @@
 import { loadRemote, registerRemotes } from '@module-federation/runtime'
+import { createI18n, i18nPlugin } from '@sentra/i18n'
 import { analyticsPlugin } from '@sentra/plugin-analytics'
 import { consoleSink, errorsPlugin, useErrors } from '@sentra/plugin-errors'
 import {
@@ -8,6 +9,7 @@ import {
   type RemoteModule,
 } from '@sentra/shell-contract'
 import { RemoteUnavailable, toastPlugin, useToast } from '@sentra/ui'
+import { uiMessages } from '@sentra/ui/i18n'
 import { createPinia } from 'pinia'
 import { createApp, h, type Component } from 'vue'
 import { createRouter, createWebHistory, RouterView, type RouteRecordRaw } from 'vue-router'
@@ -206,6 +208,34 @@ export async function bootShell(): Promise<void> {
    * `useToast()`, and its own comment explains why.
    */
   const reporter = app.runWithContext(() => useErrors())
+
+  /**
+   * The shell consumes only `ui.*` keys, so it installs `@sentra/ui`'s
+   * catalogue and ships none of its own — see ADR 0005 §"Why the asymmetry is
+   * safe" for why a remote can still ship a different `@sentra/i18n`-backed
+   * instance without a version-negotiation failure.
+   *
+   * Installed before the registration loop below, not after:
+   * `outcome.module.register(app, ...)` hands each remote this same `app`
+   * instance, and a remote's own `app.provide(I18N_INJECTION_KEY, ...)`
+   * silently replaces whatever this install just provided, for every
+   * component in the app — not only the remote's own. This install has to
+   * exist first so there is something for `useI18n()` to resolve to before
+   * any remote decides to override it; a remote whose own instance is not a
+   * strict superset of `uiMessages` would silently break every other
+   * `ui.*`-consuming component the moment it registers. `onMissing` reports
+   * through the same reporter as the `remote:failed` subscribers below.
+   */
+  const i18n = createI18n({
+    locale: 'en',
+    fallbackLocale: 'en',
+    messages: uiMessages,
+    onMissing: (key, locale) => {
+      reporter.report(new Error(`missing translation: ${key}`), { key, locale })
+    },
+  })
+  app.use(i18nPlugin, i18n)
+
   /* `analyticsPlugin` is a plugin object, not a factory — it is installed
      as `app.use(analyticsPlugin, options)`, not
      `app.use(analyticsPlugin(options))`. */
