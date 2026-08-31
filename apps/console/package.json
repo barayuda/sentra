@@ -20,8 +20,8 @@
     "init-msw": "msw init public --no-save"
   },
   "dependencies": {
-    "@sentra/i18n": "workspace:*",
     "@sentra/flags": "workspace:*",
+    "@sentra/i18n": "workspace:*",
     "@sentra/plugin-analytics": "workspace:*",
     "@sentra/plugin-errors": "workspace:*",
     "@sentra/sdk-ops": "workspace:*",
