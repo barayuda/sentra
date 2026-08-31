@@ -53,11 +53,29 @@ describe('installErrorSources', () => {
   })
 
   it('stops capturing after teardown', () => {
-    const { reports, teardown } = harness()
+    const { reports, app, teardown } = harness()
     teardown()
-    const event = new Event('error') as Event & { error?: unknown }
-    event.error = new Error('after teardown')
-    window.dispatchEvent(event)
+
+    const errorEvent = new Event('error') as Event & { error?: unknown }
+    errorEvent.error = new Error('after teardown: window error')
+    window.dispatchEvent(errorEvent)
+    expect(reports).toHaveLength(0)
+
+    const rejectionEvent = new Event('unhandledrejection') as Event & { reason?: unknown }
+    rejectionEvent.reason = new Error('after teardown: rejection')
+    window.dispatchEvent(rejectionEvent)
+    expect(reports).toHaveLength(0)
+
+    const violationEvent = new Event('securitypolicyviolation') as Event & {
+      violatedDirective?: string
+      blockedURI?: string
+    }
+    violationEvent.violatedDirective = 'script-src'
+    violationEvent.blockedURI = 'https://evil.example/x'
+    document.dispatchEvent(violationEvent)
+    expect(reports).toHaveLength(0)
+
+    app.config.errorHandler?.(new Error('after teardown: vue'), null, 'render')
     expect(reports).toHaveLength(0)
   })
 })

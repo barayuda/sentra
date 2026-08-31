@@ -87,6 +87,28 @@ equivalent:
   card number or similar behind a numeric, allowlisted key would ship it unredacted; the
   fix is to not allowlist that key, not to expect `redact` to catch it.
 
+## How to use it
+
+Install the plugin with a sink and an allowlist of context keys:
+
+```ts
+import { errorsPlugin, consoleSink } from '@sentra/plugin-errors'
+
+app.use(errorsPlugin, {
+  sink: consoleSink(),
+  allowedContextKeys: ['componentName'],
+})
+```
+
+From a component:
+
+```ts
+import { useErrors } from '@sentra/plugin-errors'
+
+const errors = useErrors()
+errors.report(new Error('failed to load'), { componentName: 'CartSummary' })
+```
+
 ## What it depends on
 
 - `vue` — peer dependency (`^3.5.0`). No runtime production dependencies.
