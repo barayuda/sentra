@@ -233,12 +233,12 @@ function onKeydown(event: KeyboardEvent): void {
             v-if="!isLoading && !loadFailed && visibleOptions.length === 0"
             class="px-3 py-2 text-sm text-neutral-500"
           >
-            No matches
+            {{ t('ui.combobox.noMatches') }}
           </li>
         </ul>
       </Transition>
       <p v-if="loadFailed" role="alert" class="mt-1 text-sm text-danger-500">
-        Options could not load. Try again.
+        {{ t('ui.combobox.loadFailed') }}
       </p>
     </div>
   </div>

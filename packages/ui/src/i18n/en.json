@@ -3,5 +3,7 @@
   "ui.dataTable.sortBy": "Sort by {column}",
   "ui.dataTable.empty": "No rows to display.",
   "ui.dataTable.rowsScrollable": "{label} rows, scrollable",
-  "ui.combobox.loading": "Loading…"
+  "ui.combobox.loading": "Loading…",
+  "ui.combobox.noMatches": "No matches",
+  "ui.combobox.loadFailed": "Options could not load. Try again."
 }

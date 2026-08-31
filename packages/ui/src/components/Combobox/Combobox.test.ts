@@ -132,7 +132,7 @@ describe('Combobox', () => {
     })
     await fireEvent.update(screen.getByRole('combobox'), 'in')
     await new Promise((r) => setTimeout(r))
-    expect(screen.getByRole('alert').textContent).toMatch(/could not load/i)
+    expect(screen.getByRole('alert').textContent).toMatch(/ui\.combobox\.loadFailed/)
   })
 
   it('does not open when disabled', async () => {
@@ -183,5 +183,26 @@ describe('Combobox', () => {
     })
     await fireEvent.update(screen.getByRole('combobox'), 'in')
     expect(screen.getByText('Memuat…')).toBeTruthy()
+  })
+
+  it('renders the translated no-matches state', async () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(Combobox, {
+      props: { label: 'Country', options },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    await fireEvent.update(screen.getByRole('combobox'), 'zzz')
+    expect(screen.getByText('Tidak ada hasil yang cocok')).toBeTruthy()
+  })
+
+  it('renders the translated load-failure alert', async () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: uiMessages })
+    render(Combobox, {
+      props: { label: 'Country', loadOptions: () => Promise.reject(new Error('boom')) },
+      global: { plugins: [[i18nPlugin, i18n]] },
+    })
+    await fireEvent.update(screen.getByRole('combobox'), 'in')
+    await new Promise((r) => setTimeout(r))
+    expect(screen.getByText('Pilihan gagal dimuat. Coba lagi.')).toBeTruthy()
   })
 })
