@@ -86,9 +86,21 @@ install to `{ en: uiMessages.en }` still constructs the whole object and saves 5
 Removing `id` from the shared package itself — a change to a platform package on behalf of one
 consumer — brings the entry to 5764 bytes, still 132 over the old budget: `id.json` gzips to
 254 bytes standalone but costs only 134 inside the chunk, because `en`'s identical key names
-have already primed the compression dictionary. Since no locale-side fix closes a 266-byte
-overage, and the one remaining option — lazy per-locale loading — is placed outside M6's scope
-by ADR 0011, the raise is the honest remedy rather than the convenient one.
+have already primed the compression dictionary.
+
+Two candidates were searched, not one. The second is to curate the catalogue's *contents*
+rather than its locales: console's own views reference only `DataTable`
+(`apps/console/src/views/OrdersView.vue:5`), three of the catalogue's seven keys. That fix is
+capped by the same structure and then by arithmetic — `en.json` is also a single JSON object
+literal, so unused keys inside it are no more droppable than an unused locale is, and four keys
+of seven cannot exceed the 134 bytes the entire other half of the catalogue costs. (Whether the
+`Toast` and `Combobox` keys reach the chunk through `@sentra/ui`'s barrel export regardless is
+a separate question, not measured here.)
+
+So the claim is a bound, not an exhaustive search of all possible fixes: the ceiling of both
+available candidates was measured and falls 132 bytes short, and the one remaining option —
+lazy per-locale loading — is placed outside M6's scope by ADR 0011. That is what makes the
+raise the honest remedy rather than the convenient one.
 
 An earlier revision of this section named the wrong cause: it said the console shipped its own
 `en`/`id` catalogues, and cited ADR 0011's lazy-splitting exclusion as though it also excluded
