@@ -60,3 +60,70 @@ describe('createI18n interpolation', () => {
     expect(onMissing).toHaveBeenCalledWith('sortBy:column', 'en')
   })
 })
+
+const plurals = {
+  en: { items: { one: '{count} item', other: '{count} items' } },
+  id: { items: { other: '{count} barang' } },
+}
+
+describe('createI18n plurals', () => {
+  it('selects the English "one" branch', () => {
+    const i18n = createI18n({ locale: 'en', fallbackLocale: 'en', messages: plurals })
+    expect(i18n.t('items', { count: 1 })).toBe('1 item')
+  })
+
+  it('selects the English "other" branch', () => {
+    const i18n = createI18n({ locale: 'en', fallbackLocale: 'en', messages: plurals })
+    expect(i18n.t('items', { count: 5 })).toBe('5 items')
+  })
+
+  it('uses Indonesian "other" for every count, having no "one" branch', () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: plurals })
+    expect(i18n.t('items', { count: 1 })).toBe('1 barang')
+    expect(i18n.t('items', { count: 5 })).toBe('5 barang')
+  })
+
+  it('uses "other" when no count is supplied', () => {
+    const i18n = createI18n({ locale: 'en', fallbackLocale: 'en', messages: plurals })
+    expect(i18n.t('items')).toBe('{count} items')
+  })
+
+  it('returns the key when a plural message has no "other" branch', () => {
+    const onMissing = vi.fn()
+    const i18n = createI18n({
+      locale: 'en',
+      fallbackLocale: 'en',
+      messages: { en: { broken: { one: 'one only' } } },
+      onMissing,
+    })
+    expect(i18n.t('broken', { count: 7 })).toBe('broken')
+    expect(onMissing).toHaveBeenCalledWith('broken', 'en')
+  })
+})
+
+describe('createI18n formatting', () => {
+  it('formats numbers in the active locale', () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: {} })
+    expect(i18n.n(1234.5)).toBe(new Intl.NumberFormat('id').format(1234.5))
+  })
+
+  it('reformats after a locale change', () => {
+    const i18n = createI18n({ locale: 'en', fallbackLocale: 'en', messages: {} })
+    const english = i18n.n(1234.5)
+    i18n.locale.value = 'id'
+    expect(i18n.n(1234.5)).toBe(new Intl.NumberFormat('id').format(1234.5))
+    expect(i18n.n(1234.5)).not.toBe(english)
+  })
+
+  it('formats dates in the active locale', () => {
+    const i18n = createI18n({ locale: 'id', fallbackLocale: 'en', messages: {} })
+    const date = new Date(Date.UTC(2026, 7, 31))
+    expect(i18n.d(date)).toBe(new Intl.DateTimeFormat('id').format(date))
+  })
+
+  it('accepts a timestamp as well as a Date', () => {
+    const i18n = createI18n({ locale: 'en', fallbackLocale: 'en', messages: {} })
+    const stamp = Date.UTC(2026, 7, 31)
+    expect(i18n.d(stamp)).toBe(i18n.d(new Date(stamp)))
+  })
+})
