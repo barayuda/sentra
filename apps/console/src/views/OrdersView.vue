@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useFlags } from '@sentra/flags'
 import { useAnalytics } from '@sentra/plugin-analytics'
 import type { OpsError, OrderSortKey, OrderSummary, SortDirection } from '@sentra/sdk-ops'
 import { DataTable, Money, type ColumnDef } from '@sentra/ui'
@@ -9,6 +10,7 @@ const PAGE_SIZE = 20
 
 const ops = useOps()
 const analytics = useAnalytics()
+const flags = useFlags<'orders.bulkActions'>()
 
 const orders = shallowRef<readonly OrderSummary[]>([])
 const totalCount = ref(0)
@@ -78,7 +80,17 @@ const columns: ColumnDef<OrderSummary>[] = [
   <section class="p-6">
     <header class="mb-4 flex items-baseline justify-between">
       <h1 class="text-xl font-semibold">Orders</h1>
-      <p class="text-sm text-slate-500">Showing {{ orders.length }} of {{ totalCount }}</p>
+      <div class="flex items-baseline gap-4">
+        <button
+          v-if="flags.isOn('orders.bulkActions')"
+          type="button"
+          data-testid="orders-bulk-actions"
+          class="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Bulk actions
+        </button>
+        <p class="text-sm text-slate-500">Showing {{ orders.length }} of {{ totalCount }}</p>
+      </div>
     </header>
 
     <p

@@ -1,8 +1,10 @@
+import { createFlagClient, type FlagClient, type FlagSource } from '@sentra/flags'
 import { analyticsPlugin, type Transport } from '@sentra/plugin-analytics'
 import type { OpsClient } from '@sentra/sdk-ops'
 import { render, screen, waitFor } from '@testing-library/vue'
 import { describe, expect, it, vi } from 'vitest'
 import { consoleEventSchema } from '../analytics.ts'
+import { CONSOLE_FLAGS } from '../flags.ts'
 import { opsPlugin } from '../ops.ts'
 import OrdersView from './OrdersView.vue'
 
@@ -38,13 +40,21 @@ function clientWith(overrides: Partial<OpsClient>): OpsClient {
 /** A transport that discards every event — the view under test is not analytics. */
 const stubTransport: Transport = { send: vi.fn() }
 
-function renderView(client: OpsClient) {
+/**
+ * Renders the view, optionally providing a flag client keyed by the
+ * `'sentra:flags'` string (ADR 0005) via `global.provide` rather than
+ * `global.plugins` — `app.use()` dedupes by plugin identity, so a
+ * per-test `app.use(flagsPlugin, client)` on top of a globally-registered
+ * one would silently no-op.
+ */
+function renderView(client: OpsClient, flagsClient?: FlagClient<string>) {
   return render(OrdersView, {
     global: {
       plugins: [
         [opsPlugin, client],
         [analyticsPlugin, { schema: consoleEventSchema, transport: stubTransport }],
       ],
+      provide: flagsClient ? { 'sentra:flags': flagsClient } : {},
     },
   })
 }
@@ -109,5 +119,44 @@ describe('OrdersView', () => {
     renderView(clientWith({ listOrders }))
 
     expect(await screen.findByText(/ops role required/i)).toBeTruthy()
+  })
+
+  /*
+   * These three tests are split deliberately, not as two folded into one.
+   * "Absent by default" names two different mechanisms — no client installed
+   * (NULL_FLAGS, which answers `false` for every key with no declarations at
+   * all) and a real client whose declared default is `false` — and a single
+   * absence-assertion cannot tell which one made the UI disappear. Splitting
+   * them means test 2 alone documents that the declaration is respected; see
+   * the report for the deliberate-failure experiment that proves it.
+   */
+  describe('the orders.bulkActions gate', () => {
+    it('is absent when no flag client is installed', async () => {
+      renderView(clientWith({}))
+      await screen.findByText('SEN-1042')
+
+      expect(screen.queryByTestId('orders-bulk-actions')).toBeNull()
+    })
+
+    it('is absent for a real client with a declared-false default and a source that never resolves', async () => {
+      const neverResolves: FlagSource = { load: () => new Promise(() => undefined) }
+      const flags = createFlagClient({ declarations: CONSOLE_FLAGS, source: neverResolves })
+      void flags.refresh()
+
+      renderView(clientWith({}), flags)
+      await screen.findByText('SEN-1042')
+
+      expect(screen.queryByTestId('orders-bulk-actions')).toBeNull()
+    })
+
+    it('is present when the flag client reports the flag on', async () => {
+      const onSource: FlagSource = { load: async () => ({ 'orders.bulkActions': true }) }
+      const flags = createFlagClient({ declarations: CONSOLE_FLAGS, source: onSource })
+      await flags.refresh()
+
+      renderView(clientWith({}), flags)
+
+      expect(await screen.findByTestId('orders-bulk-actions')).toBeTruthy()
+    })
   })
 })

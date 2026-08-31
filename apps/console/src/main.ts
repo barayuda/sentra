@@ -1,9 +1,11 @@
+import { createFlagClient, flagsPlugin } from '@sentra/flags'
 import {
   analyticsPlugin,
   captureWebVitals,
   instrumentRouter,
   useAnalytics,
 } from '@sentra/plugin-analytics'
+import { consoleSink, errorsPlugin, useErrors } from '@sentra/plugin-errors'
 import { createShellBus, shellBusPlugin } from '@sentra/shell-contract'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
@@ -11,6 +13,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import { consoleEventSchema, createConsoleAnalyticsTransport } from './analytics.ts'
 import consoleRemote from './federated/index.ts'
+import { CONSOLE_FLAGS, createOpsFlagSource } from './flags.ts'
+import { createConsoleOpsClient, opsPlugin } from './ops.ts'
 
 /**
  * Whether this build serves data from MSW fixtures.
@@ -67,15 +71,49 @@ async function bootstrap(): Promise<void> {
 
   const app = createApp(App)
   const bus = createShellBus()
+  const opsClient = createConsoleOpsClient()
 
   app.use(createPinia())
   app.use(router)
   app.use(shellBusPlugin, bus)
+  /*
+   * Installed before `consoleRemote.register`, which also installs
+   * `opsPlugin` for standalone use: `app.use()` dedupes by plugin identity,
+   * so registering it here first keeps a single ops client for the whole
+   * app — the same one `createOpsFlagSource` reads below — rather than
+   * letting `register` construct a second, independent instance.
+   */
+  app.use(opsPlugin, opsClient)
   app.use(analyticsPlugin, {
     schema: consoleEventSchema,
     transport: createConsoleAnalyticsTransport(),
   })
   consoleRemote.register(app, { bus, basePath: '' })
+
+  /*
+   * Installed before the flags plugin so `onError`, below, has a reporter to
+   * route into. This is the same composition pattern the storefront uses for
+   * i18n (`apps/storefront/src/main.ts`), applied here to a different battery.
+   */
+  app.use(errorsPlugin, { sink: consoleSink(), allowedContextKeys: ['view'] })
+
+  /**
+   * `errorsPlugin` owns its reporter, so retrieving it outside a component
+   * means running `useErrors()` inside the app's injection context.
+   * `app.runWithContext` avoids constructing a second reporter that would
+   * track its own `maxPerSession` count independently of the one every
+   * component sees.
+   */
+  const reporter = app.runWithContext(() => useErrors())
+
+  const flags = createFlagClient({
+    declarations: CONSOLE_FLAGS,
+    source: createOpsFlagSource(opsClient),
+    allowOverrides: import.meta.env.DEV,
+    onError: (error) => reporter.report(error, { view: 'flags' }),
+  })
+  app.use(flagsPlugin, flags)
+  void flags.refresh()
 
   /**
    * `analyticsPlugin` owns its client, so retrieving it outside a component
