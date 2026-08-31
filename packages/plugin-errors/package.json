@@ -1,0 +1,30 @@
+{
+  "name": "@sentra/plugin-errors",
+  "version": "0.0.0",
+  "private": true,
+  "sentra": {
+    "role": "platform"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@sentra/config": "workspace:*",
+    "@testing-library/vue": "8.1.0",
+    "@vitejs/plugin-vue": "6.0.8",
+    "@vitest/coverage-v8": "4.1.11",
+    "happy-dom": "20.11.8",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11",
+    "vue": "3.5.42"
+  }
+}
